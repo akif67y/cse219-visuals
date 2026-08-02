@@ -30,6 +30,8 @@
       { href: "fourier-transform-from-series.html", icon: "∿", label: "From Series to Transform" },
       { href: "listening-to-frequencies.html", icon: "✂️", label: "Frequency Scissors" },
       { href: "noise-surgery.html", icon: "🩺", label: "Noise Cancellation" },
+      { href: "image-denoising-fourier.html", icon: "🫧", label: "Image Denoising" },
+      { href: "image-edge-detection-fourier.html", icon: "⚡", label: "Image Edge Finder" },
       { href: "image-compression-lab.html", icon: "🖼️", label: "Let’s Compress Images" },
     ],
     footer: "Anik Saha<br>aaniksahaa.2001@gmail.com",

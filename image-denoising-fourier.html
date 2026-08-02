@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Frequency Wash · Image Denoising · CSE 219</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="assets/site.css" />
+<link rel="stylesheet" href="assets/image-frequency-demo.css" />
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<div class="site">
+  <aside class="sidebar" id="siteSidebar"></aside>
+  <main class="content">
+    <div class="image-demo-wrap">
+      <header class="image-demo-header">
+        <h1>🫧 Frequency Wash: Cleaning an Image</h1>
+        <p>Noise often has a recognizable frequency signature. Suppress those frequencies and compare targeted recovery with general low-pass smoothing.</p>
+        <div class="image-pipeline" aria-label="Denoising pipeline">
+          <span>Noisy image</span><b>→</b><span>2D FFT</span><b>→</b><span>Reduce noisy frequencies</span><b>→</b><span>Inverse FFT</span><b>→</b><span>Cleaner image</span>
+        </div>
+      </header>
+
+      <section class="image-card">
+        <h2>Image and noise</h2>
+        <div class="image-controls">
+          <div>
+            <div class="image-row" id="sampleButtons">
+              <button class="image-button active" type="button" data-sample="shapes">Geometric scene</button>
+              <button class="image-button" type="button" data-sample="text">CSE 219</button>
+              <button class="image-button" type="button" data-sample="rings">Smooth rings</button>
+            </div>
+            <div class="image-row" style="margin-top:10px">
+              <button class="image-button" id="uploadButton" type="button">📁 Upload image</button>
+              <input class="image-file-input" id="fileInput" type="file" accept="image/*" />
+              <button class="image-button" id="resetButton" type="button">↺ Reset</button>
+              <span class="image-status">Source: <b id="sourceName">Geometric scene</b></span>
+            </div>
+          </div>
+          <div>
+            <div class="image-field">
+              <label for="noiseTypeSelect">Noise type</label>
+              <select id="noiseTypeSelect">
+                <option value="periodic">Periodic peaks (recoverable)</option>
+                <option value="mixed">Grain + periodic (realistic)</option>
+              </select>
+            </div>
+            <div class="image-control">
+              <label for="noiseSlider">Noise amount</label>
+              <input id="noiseSlider" type="range" min="0" max="40" step="1" value="20" />
+              <span class="value" id="noiseValue">20%</span>
+            </div>
+            <p class="image-status" id="noiseDescription">Two periodic patterns create four isolated spectrum peaks that a targeted notch filter can remove with very little loss of image detail.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="image-card">
+        <h2>Denoising filter controls</h2>
+        <div class="image-controls">
+          <div>
+            <div class="image-fields">
+              <div class="image-field">
+                <label for="filterSelect">Filter type</label>
+                <select id="filterSelect">
+                  <option value="notch">Target periodic noise peaks</option>
+                  <option value="gaussian">Smooth Gaussian low-pass</option>
+                  <option value="hard">Hard circular mask</option>
+                </select>
+              </div>
+              <div class="image-field">
+                <label for="displaySelect">Frequency panel</label>
+                <select id="displaySelect">
+                  <option value="mask">Spectrum + mask</option>
+                  <option value="spectrum">Spectrum only</option>
+                  <option value="removed">What we threw away</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="image-control" id="cutoffControl">
+              <label for="cutoffSlider">Cutoff radius</label>
+              <input id="cutoffSlider" type="range" min="4" max="110" step="1" value="45" />
+              <span class="value" id="cutoffValue">45 px</span>
+            </div>
+            <div class="image-control" id="notchControl">
+              <label for="notchSlider">Notch width</label>
+              <input id="notchSlider" type="range" min="0.5" max="10" step="0.5" value="0.5" />
+              <span class="value" id="notchValue">0.5 px</span>
+            </div>
+            <div class="image-control" id="softnessControl">
+              <label for="softnessSlider">Filter softness</label>
+              <input id="softnessSlider" type="range" min="0" max="40" step="1" value="20" />
+              <span class="value" id="softnessValue">20</span>
+            </div>
+          </div>
+        </div>
+        <div class="image-formula" id="filterFormula">X<sub>clean</sub>[u,v] = X<sub>noisy</sub>[u,v] · M<sub>notch</sub>[u,v]</div>
+      </section>
+
+      <section class="image-stage-grid" aria-label="Denoising results">
+        <article class="image-panel">
+          <div class="image-panel-head"><h2>Original image</h2><span class="image-panel-note">clean reference</span></div>
+          <div class="image-canvas-box"><canvas id="originalCanvas" width="256" height="256"></canvas></div>
+        </article>
+        <article class="image-panel">
+          <div class="image-panel-head"><h2>Noisy image</h2><span class="image-panel-note">input to the FFT</span></div>
+          <div class="image-canvas-box"><canvas id="noisyCanvas" width="256" height="256"></canvas></div>
+        </article>
+        <article class="image-panel">
+          <div class="image-panel-head"><h2 id="frequencyTitle">Frequency spectrum + mask</h2><span class="image-panel-note" id="frequencyNote">bright center = slow changes</span></div>
+          <div class="image-canvas-box dark" id="frequencyBox"><canvas id="frequencyCanvas" width="256" height="256"></canvas></div>
+        </article>
+        <article class="image-panel">
+          <div class="image-panel-head"><h2>Denoised image</h2><span class="image-panel-note">inverse FFT result</span></div>
+          <div class="image-canvas-box"><canvas id="denoisedCanvas" width="256" height="256"></canvas></div>
+        </article>
+      </section>
+
+      <section class="image-card" style="margin-top:18px">
+        <h2>What changed?</h2>
+        <div class="image-metrics">
+          <div class="image-metric"><div class="key">Noisy error</div><div class="metric-value" id="noisyError">—</div><div class="detail">RMSE from original</div></div>
+          <div class="image-metric"><div class="key">Denoised error</div><div class="metric-value" id="cleanError">—</div><div class="detail">RMSE from original</div></div>
+          <div class="image-metric"><div class="key">Filter kept</div><div class="metric-value" id="keptValue">—</div><div class="detail">average mask weight</div></div>
+        </div>
+        <div class="image-explainer" id="mainExplanation">Periodic noise creates isolated bright peaks in the spectrum. Narrow notches suppress those peaks while retaining almost every other image frequency, so the original can be recovered much more closely.</div>
+        <div class="image-explainer image-caution"><b>Teaching caution:</b> Fourier denoising works best when noise is high-frequency or frequency-localized. If noise overlaps useful detail, filtering removes some of both.</div>
+      </section>
+
+      <footer class="image-demo-footer">2D Fourier image denoising · CSE 219 Signals &amp; Linear Systems · runs entirely in your browser.</footer>
+    </div>
+  </main>
+</div>
+
+<script src="assets/image-fourier.js"></script>
+<script>
+(function () {
+  "use strict";
+  const SIZE = 256;
+  const $ = id => document.getElementById(id);
+  const labels = { shapes: "Geometric scene", text: "CSE 219", rings: "Smooth rings" };
+  let activeSample = "shapes";
+  let original = null;
+  let noisy = null;
+  let spectrum = null;
+  let renderFrame = 0;
+
+  function SetSample(sampleId) {
+    activeSample = sampleId;
+    original = ImageFourier.CreateSample(sampleId, SIZE);
+    $("sourceName").textContent = labels[sampleId];
+    document.querySelectorAll("[data-sample]").forEach(button => button.classList.toggle("active", button.dataset.sample === sampleId));
+    RebuildNoise();
+  }
+
+  function RebuildNoise() {
+    noisy = ImageFourier.AddTeachingNoise(original, Number($("noiseSlider").value) / 100, SIZE, 219, $("noiseTypeSelect").value);
+    spectrum = ImageFourier.ComputeFFT2(noisy, SIZE);
+    ScheduleRender();
+  }
+
+  function ScheduleRender() {
+    cancelAnimationFrame(renderFrame);
+    renderFrame = requestAnimationFrame(Render);
+  }
+
+  function Render() {
+    const filterType = $("filterSelect").value;
+    const radius = Number($("cutoffSlider").value);
+    const softness = Number($("softnessSlider").value);
+    const notchWidth = Number($("notchSlider").value);
+    const notch = filterType === "notch";
+    const hard = filterType === "hard";
+    const mask = filterType === "notch"
+      ? ImageFourier.CreateNotchMask(SIZE, { width: notchWidth, type: "hard" })
+      : ImageFourier.CreateRadialMask(SIZE, { pass: "low", type: filterType, radius, softness });
+    const filteredSpectrum = ImageFourier.ApplyMask(spectrum, mask);
+    const denoised = ImageFourier.ComputeIFFT2(filteredSpectrum);
+    const removed = ImageFourier.Difference(noisy, denoised);
+
+    ImageFourier.RenderGray($("originalCanvas"), original, { size: SIZE });
+    ImageFourier.RenderGray($("noisyCanvas"), noisy, { size: SIZE });
+    ImageFourier.RenderGray($("denoisedCanvas"), denoised, { size: SIZE });
+
+    const display = $("displaySelect").value;
+    $("frequencyBox").classList.toggle("dark", display !== "removed");
+    if (display === "removed") {
+      $("frequencyTitle").textContent = "What we threw away";
+      $("frequencyNote").textContent = "absolute removed component";
+      ImageFourier.RenderGray($("frequencyCanvas"), removed, { size: SIZE, absolute: true, normalize: true });
+    } else {
+      $("frequencyTitle").textContent = display === "mask" ? "Frequency spectrum + mask" : "Frequency spectrum";
+      $("frequencyNote").textContent = display === "mask"
+        ? (filterType === "notch" ? "four tiny noise peaks are removed" : "dimmed frequencies are reduced")
+        : "center = low frequency";
+      ImageFourier.RenderSpectrum($("frequencyCanvas"), spectrum, { mask: display === "mask" ? mask : null, overlay: display === "mask" });
+    }
+
+    const noisyRmse = Math.sqrt(ImageFourier.MeanSquaredError(original, noisy));
+    const cleanRmse = Math.sqrt(ImageFourier.MeanSquaredError(original, denoised));
+    $("noisyError").textContent = noisyRmse.toFixed(3);
+    $("cleanError").textContent = cleanRmse.toFixed(3);
+    $("cleanError").style.color = cleanRmse < noisyRmse ? "#059669" : "#b45309";
+    $("keptValue").textContent = (ImageFourier.MeanMask(mask) * 100).toFixed(notch ? 3 : 1) + "%";
+    $("noiseValue").textContent = $("noiseSlider").value + "%";
+    $("cutoffValue").textContent = radius + " px";
+    $("softnessValue").textContent = String(softness);
+    $("notchValue").textContent = notchWidth.toFixed(1) + " px";
+    $("notchControl").style.display = notch ? "grid" : "none";
+    $("cutoffControl").style.display = notch ? "none" : "grid";
+    $("softnessControl").style.display = notch ? "none" : "grid";
+    $("softnessSlider").disabled = hard || notch;
+    $("softnessControl").style.opacity = hard ? ".38" : "1";
+    $("filterFormula").innerHTML = notch
+      ? "X<sub>clean</sub>[u,v] = X<sub>noisy</sub>[u,v] · M<sub>notch</sub>[u,v]"
+      : "X<sub>clean</sub>[u,v] = X<sub>noisy</sub>[u,v] · M<sub>low-pass</sub>[u,v]";
+    $("mainExplanation").textContent = notch
+      ? "Periodic noise creates isolated bright peaks in the spectrum. Narrow notches suppress those peaks while retaining almost every other image frequency, so the original can be recovered much more closely."
+      : "A circular low-pass filter reduces broad high-frequency noise, but useful edges occupy some of those same frequencies. Lowering the cutoff therefore trades remaining noise for increasing blur.";
+  }
+
+  function LoadUpload(file) {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      canvas.getContext("2d").drawImage(image, 0, 0);
+      original = ImageFourier.CanvasToGrayscale(canvas, SIZE);
+      activeSample = null;
+      $("sourceName").textContent = file.name;
+      document.querySelectorAll("[data-sample]").forEach(button => button.classList.remove("active"));
+      URL.revokeObjectURL(url);
+      RebuildNoise();
+    };
+    image.onerror = () => URL.revokeObjectURL(url);
+    image.src = url;
+  }
+
+  document.querySelectorAll("[data-sample]").forEach(button => button.addEventListener("click", () => SetSample(button.dataset.sample)));
+  $("uploadButton").addEventListener("click", () => $("fileInput").click());
+  $("fileInput").addEventListener("change", event => { if (event.target.files[0]) LoadUpload(event.target.files[0]); });
+  $("resetButton").addEventListener("click", () => SetSample("shapes"));
+  $("noiseSlider").addEventListener("input", RebuildNoise);
+  $("noiseTypeSelect").addEventListener("input", () => {
+    const periodic = $("noiseTypeSelect").value === "periodic";
+    $("noiseDescription").textContent = periodic
+      ? "Two periodic patterns create four isolated spectrum peaks that a targeted notch filter can remove with very little loss of image detail."
+      : "Random grain spreads across the spectrum while periodic noise adds bright peaks. Exact recovery is impossible where noise and useful image frequencies overlap.";
+    RebuildNoise();
+  });
+  ["filterSelect", "displaySelect", "cutoffSlider", "notchSlider", "softnessSlider"].forEach(id => $(id).addEventListener("input", ScheduleRender));
+  SetSample("shapes");
+})();
+</script>
+</body>
+</html>

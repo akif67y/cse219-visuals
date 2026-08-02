@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Frequency Edge Finder · CSE 219</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="assets/site.css" />
+<link rel="stylesheet" href="assets/image-frequency-demo.css" />
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<div class="site">
+  <aside class="sidebar" id="siteSidebar"></aside>
+  <main class="content">
+    <div class="image-demo-wrap">
+      <header class="image-demo-header">
+        <h1>⚡ Frequency Edge Finder</h1>
+        <p>Edges are places where brightness changes fast. Remove the calm center of the spectrum and keep the rapid spatial changes.</p>
+        <div class="image-pipeline" aria-label="Edge detection pipeline">
+          <span>Image</span><b>→</b><span>2D FFT</span><b>→</b><span>Keep high frequencies</span><b>→</b><span>Inverse FFT</span><b>→</b><span>Edge-like output</span>
+        </div>
+      </header>
+
+      <section class="image-card">
+        <h2>Image source</h2>
+        <div class="image-row" id="sampleButtons">
+          <button class="image-button active" type="button" data-sample="shapes">Geometric scene</button>
+          <button class="image-button" type="button" data-sample="text">CSE 219</button>
+          <button class="image-button" type="button" data-sample="rings">Smooth rings</button>
+          <button class="image-button" id="uploadButton" type="button">📁 Upload image</button>
+          <input class="image-file-input" id="fileInput" type="file" accept="image/*" />
+          <button class="image-button" id="resetButton" type="button">↺ Reset</button>
+          <span class="image-status">Source: <b id="sourceName">Geometric scene</b></span>
+        </div>
+      </section>
+
+      <section class="image-card">
+        <h2>High-pass filter controls</h2>
+        <div class="image-controls">
+          <div>
+            <div class="image-fields">
+              <div class="image-field">
+                <label for="filterSelect">Filter type</label>
+                <select id="filterSelect">
+                  <option value="gaussian">Smooth Gaussian</option>
+                  <option value="hard">Hard circular mask</option>
+                </select>
+              </div>
+              <div class="image-field">
+                <label for="outputSelect">Output view</label>
+                <select id="outputSelect">
+                  <option value="high">High frequencies (edges)</option>
+                  <option value="binary">Thresholded edge map</option>
+                  <option value="low">Low frequencies (smooth part)</option>
+                </select>
+              </div>
+            </div>
+            <div class="image-row" style="margin-top:14px">
+              <label class="image-status"><input id="invertToggle" type="checkbox" /> Invert output</label>
+            </div>
+          </div>
+          <div>
+            <div class="image-control">
+              <label for="cutoffSlider">Cutoff radius</label>
+              <input id="cutoffSlider" type="range" min="2" max="110" step="1" value="28" />
+              <span class="value" id="cutoffValue">28 px</span>
+            </div>
+            <div class="image-control" id="softnessControl">
+              <label for="softnessSlider">Filter softness</label>
+              <input id="softnessSlider" type="range" min="0" max="40" step="1" value="18" />
+              <span class="value" id="softnessValue">18</span>
+            </div>
+            <div class="image-control" id="strengthControl">
+              <label for="strengthSlider">Edge strength</label>
+              <input id="strengthSlider" type="range" min="25" max="300" step="5" value="130" />
+              <span class="value" id="strengthValue">1.30×</span>
+            </div>
+            <div class="image-control" id="thresholdControl">
+              <label for="thresholdSlider">Threshold</label>
+              <input id="thresholdSlider" type="range" min="2" max="80" step="1" value="24" />
+              <span class="value" id="thresholdValue">24%</span>
+            </div>
+          </div>
+        </div>
+        <div class="image-formula">X<sub>edge</sub>[u,v] = X[u,v] · M<sub>high-pass</sub>[u,v], &nbsp; E[m,n] = |IFFT2{X<sub>edge</sub>}|</div>
+      </section>
+
+      <section class="image-stage-grid" aria-label="Edge detection results">
+        <article class="image-panel">
+          <div class="image-panel-head"><h2>Original image</h2><span class="image-panel-note">brightness signal x[m,n]</span></div>
+          <div class="image-canvas-box"><canvas id="originalCanvas" width="256" height="256"></canvas></div>
+        </article>
+        <article class="image-panel">
+          <div class="image-panel-head"><h2>Frequency spectrum</h2><span class="image-panel-note">center = smooth variation</span></div>
+          <div class="image-canvas-box dark"><canvas id="spectrumCanvas" width="256" height="256"></canvas></div>
+        </article>
+        <article class="image-panel">
+          <div class="image-panel-head"><h2>High-pass mask</h2><span class="image-panel-note">bright frequencies are kept</span></div>
+          <div class="image-canvas-box dark"><canvas id="maskCanvas" width="256" height="256"></canvas></div>
+        </article>
+        <article class="image-panel">
+          <div class="image-panel-head"><h2 id="outputTitle">Edge-like output</h2><span class="image-panel-note" id="outputNote">magnitude of high-pass result</span></div>
+          <div class="image-canvas-box"><canvas id="outputCanvas" width="256" height="256"></canvas></div>
+        </article>
+      </section>
+
+      <section class="image-card" style="margin-top:18px">
+        <h2>Frequency readout</h2>
+        <div class="image-metrics">
+          <div class="image-metric"><div class="key">High-pass weight</div><div class="metric-value" id="highWeight">—</div><div class="detail">average frequency mask</div></div>
+          <div class="image-metric"><div class="key">Edge energy</div><div class="metric-value" id="edgeEnergy">—</div><div class="detail">RMS high-pass output</div></div>
+          <div class="image-metric"><div class="key">Cutoff</div><div class="metric-value" id="cutoffMetric">—</div><div class="detail">pixels from spectrum center</div></div>
+        </div>
+        <div class="image-explainer">Edges correspond to rapid spatial changes. Removing the low-frequency center and keeping the outer spectrum emphasizes boundaries, texture, and other sharp transitions.</div>
+        <div class="image-explainer image-caution"><b>Teaching caution:</b> this is not a full modern edge detector like Canny. Fourier high-pass filtering also emphasizes fine texture and noise, so the result is deliberately described as edge-like.</div>
+      </section>
+
+      <footer class="image-demo-footer">Fourier high-pass edge visualization · CSE 219 Signals &amp; Linear Systems · runs entirely in your browser.</footer>
+    </div>
+  </main>
+</div>
+
+<script src="assets/image-fourier.js"></script>
+<script>
+(function () {
+  "use strict";
+  const SIZE = 256;
+  const $ = id => document.getElementById(id);
+  const labels = { shapes: "Geometric scene", text: "CSE 219", rings: "Smooth rings" };
+  let original = null;
+  let spectrum = null;
+  let renderFrame = 0;
+
+  function SetSample(sampleId) {
+    original = ImageFourier.CreateSample(sampleId, SIZE);
+    spectrum = ImageFourier.ComputeFFT2(original, SIZE);
+    $("sourceName").textContent = labels[sampleId];
+    document.querySelectorAll("[data-sample]").forEach(button => button.classList.toggle("active", button.dataset.sample === sampleId));
+    ScheduleRender();
+  }
+
+  function ScheduleRender() {
+    cancelAnimationFrame(renderFrame);
+    renderFrame = requestAnimationFrame(Render);
+  }
+
+  function Render() {
+    const filterType = $("filterSelect").value;
+    const radius = Number($("cutoffSlider").value);
+    const softness = Number($("softnessSlider").value);
+    const highMask = ImageFourier.CreateRadialMask(SIZE, { pass: "high", type: filterType, radius, softness });
+    const lowMask = new Float32Array(highMask.length);
+    for (let i = 0; i < highMask.length; i++) lowMask[i] = 1 - highMask[i];
+    const highResult = ImageFourier.ComputeIFFT2(ImageFourier.ApplyMask(spectrum, highMask));
+    const lowResult = ImageFourier.ComputeIFFT2(ImageFourier.ApplyMask(spectrum, lowMask));
+    const outputView = $("outputSelect").value;
+    const invert = $("invertToggle").checked;
+    const gain = Number($("strengthSlider").value) / 100;
+
+    ImageFourier.RenderGray($("originalCanvas"), original, { size: SIZE });
+    ImageFourier.RenderSpectrum($("spectrumCanvas"), spectrum);
+    ImageFourier.RenderMask($("maskCanvas"), highMask, SIZE);
+
+    if (outputView === "low") {
+      $("outputTitle").textContent = "Low-frequency remainder";
+      $("outputNote").textContent = "the smooth part removed from edges";
+      ImageFourier.RenderGray($("outputCanvas"), lowResult, { size: SIZE, invert });
+    } else if (outputView === "binary") {
+      $("outputTitle").textContent = "Thresholded edge map";
+      $("outputNote").textContent = "optional binary teaching view";
+      ImageFourier.RenderThreshold($("outputCanvas"), highResult, { size: SIZE, threshold: Number($("thresholdSlider").value) / 100, invert });
+    } else {
+      $("outputTitle").textContent = "Edge-like output";
+      $("outputNote").textContent = "magnitude of high-pass result";
+      ImageFourier.RenderGray($("outputCanvas"), highResult, { size: SIZE, absolute: true, normalize: true, gain, invert });
+    }
+
+    let energy = 0;
+    for (let i = 0; i < highResult.length; i++) energy += highResult[i] * highResult[i];
+    energy = Math.sqrt(energy / highResult.length);
+    $("highWeight").textContent = (ImageFourier.MeanMask(highMask) * 100).toFixed(1) + "%";
+    $("edgeEnergy").textContent = energy.toFixed(3);
+    $("cutoffMetric").textContent = radius + " px";
+    $("cutoffValue").textContent = radius + " px";
+    $("softnessValue").textContent = String(softness);
+    $("strengthValue").textContent = gain.toFixed(2) + "×";
+    $("thresholdValue").textContent = $("thresholdSlider").value + "%";
+
+    const hard = filterType === "hard";
+    $("softnessSlider").disabled = hard;
+    $("softnessControl").style.opacity = hard ? ".38" : "1";
+    $("strengthControl").style.opacity = outputView === "high" ? "1" : ".38";
+    $("strengthSlider").disabled = outputView !== "high";
+    $("thresholdControl").style.opacity = outputView === "binary" ? "1" : ".38";
+    $("thresholdSlider").disabled = outputView !== "binary";
+  }
+
+  function LoadUpload(file) {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      canvas.getContext("2d").drawImage(image, 0, 0);
+      original = ImageFourier.CanvasToGrayscale(canvas, SIZE);
+      spectrum = ImageFourier.ComputeFFT2(original, SIZE);
+      $("sourceName").textContent = file.name;
+      document.querySelectorAll("[data-sample]").forEach(button => button.classList.remove("active"));
+      URL.revokeObjectURL(url);
+      ScheduleRender();
+    };
+    image.onerror = () => URL.revokeObjectURL(url);
+    image.src = url;
+  }
+
+  document.querySelectorAll("[data-sample]").forEach(button => button.addEventListener("click", () => SetSample(button.dataset.sample)));
+  $("uploadButton").addEventListener("click", () => $("fileInput").click());
+  $("fileInput").addEventListener("change", event => { if (event.target.files[0]) LoadUpload(event.target.files[0]); });
+  $("resetButton").addEventListener("click", () => SetSample("shapes"));
+  ["filterSelect", "outputSelect", "cutoffSlider", "softnessSlider", "strengthSlider", "thresholdSlider", "invertToggle"].forEach(id => $(id).addEventListener("input", ScheduleRender));
+  SetSample("shapes");
+})();
+</script>
+</body>
+</html>
