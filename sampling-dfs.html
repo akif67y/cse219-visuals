@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sampling and the Discrete Fourier Series · CSE 219</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="assets/site.css" />
+<script src="assets/site.js" defer></script>
+<style>
+  :root{
+    --violet:#4f46e5;--violet-dark:#3730a3;--violet-soft:#eef2ff;
+    --blue:#2563eb;--cyan:#0891b2;--orange:#ea580c;
+    --plot:#fbfcff;--radius:16px;
+  }
+  .content{overflow-x:hidden}
+  .lab{width:100%;max-width:1240px;margin:0 auto;padding:30px 22px 80px}
+  .lab-header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px}
+  .eyebrow{color:var(--violet);font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+  .lab-header h1{font-size:30px;line-height:1.15;letter-spacing:-.03em;margin:0}
+  .lab-header p{color:var(--muted);font-size:14.5px;max-width:760px;margin:8px 0 0}
+  .limit-pill{flex:none;background:linear-gradient(135deg,#eef2ff,#f5f3ff);color:var(--violet-dark);border:1px solid #dcdcff;border-radius:14px;padding:12px 16px;font-size:14px;font-weight:800;white-space:nowrap}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:18px;min-width:0}
+  .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:14px}
+  .card-head h2{font-size:16px;letter-spacing:-.01em;margin:0}
+  .card-head p{font-size:12.8px;color:var(--muted);margin:4px 0 0;max-width:700px}
+  .step{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:25px;padding:0 8px;border-radius:999px;background:var(--violet-soft);color:var(--violet);font-size:11px;font-weight:900;margin-right:7px;vertical-align:2px}
+  .controls{display:grid;grid-template-columns:1.2fr 1fr auto;gap:16px;align-items:end}
+  .field{min-width:0}
+  .field label{display:flex;justify-content:space-between;gap:8px;color:#4b5563;font-size:12px;font-weight:800;margin-bottom:7px}
+  .field output{color:var(--violet);font-variant-numeric:tabular-nums}
+  select{width:100%;border:1px solid #d9dce6;border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:13px;font-weight:650;padding:9px 11px;outline:none}
+  select:focus{border-color:#a5b4fc;box-shadow:0 0 0 3px #eef2ff}
+  input[type=range]{width:100%;height:5px;margin:8px 0;accent-color:var(--violet)}
+  .actions{display:flex;gap:8px}
+  .btn{border:1px solid #d9dce6;background:#fff;color:#374151;border-radius:10px;padding:8px 13px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+  .btn:hover{background:#fafbff;border-color:#c7cad7}
+  .btn.primary{background:var(--violet);border-color:var(--violet);color:#fff;min-width:88px}
+  .live-metrics{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .metric{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:7px 10px;color:var(--muted);font-size:11.5px}
+  .metric b{color:var(--ink);font-size:12.5px;font-variant-numeric:tabular-nums;margin-left:5px}
+  .metric.warn{border-color:#fdba74;background:#fff7ed;color:#9a3412}
+  .plots{display:grid;grid-template-columns:1fr;gap:18px}
+  .plot-card{margin:0}
+  .plot-wrap{height:300px;background:var(--plot);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative}
+  .plot-wrap.tall{height:340px}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  .tip{position:absolute;pointer-events:none;background:#1c2333;color:#fff;font-size:11.5px;line-height:1.45;padding:7px 9px;border-radius:8px;transform:translate(-50%,-115%);white-space:nowrap;opacity:0;transition:opacity .08s}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:11px;color:#596273;font-size:11.8px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .key{width:17px;height:3px;border-radius:2px;background:var(--blue);display:inline-block}
+  .key.faint{background:#bcc5ec}.key.comb{background:#9aa3b2}.key.true{background:var(--orange)}
+  .teaching-note{background:#f8fafc;border-left:3px solid var(--violet);border-radius:0 9px 9px 0;color:#566072;font-size:12.8px;line-height:1.5;margin-top:12px;padding:9px 12px}
+  .teaching-note b{color:#303849}
+  @media(max-width:1080px){.controls{grid-template-columns:1fr 1fr}.plot-wrap{height:270px}.plot-wrap.tall{height:300px}}
+  @media(max-width:680px){
+    .lab{padding:22px 14px 60px}.lab-header{display:block}.limit-pill{display:inline-block;margin-top:13px;white-space:normal}
+    .lab-header h1{font-size:25px}.card{padding:17px 15px}.controls{grid-template-columns:1fr}
+    .actions .btn{flex:1}.plot-wrap{height:240px}.plot-wrap.tall{height:260px}.card-head{display:block}
+  }
+</style>
+</head>
+<body>
+<div class="site">
+  <aside class="sidebar" id="siteSidebar"></aside>
+  <main class="content">
+    <div class="lab">
+      <header class="lab-header">
+        <div>
+          <div class="eyebrow">DTFT &amp; DFT · lecture 1, part I</div>
+          <h1>Sampling and the Discrete Fourier Series</h1>
+          <p>Multiply a continuous periodic signal by an impulse train and only <i>N</i> samples per period survive. Take the Fourier series of what is left: the integral collapses to a sum, and the coefficients repeat forever with period <i>N</i>.</p>
+        </div>
+        <div class="limit-pill">c<sub>k</sub> = <sup>1</sup>&frasl;<sub>T₀</sub> Σ x[n]e<sup>−j2πkn/N</sup></div>
+      </header>
+
+      <section class="card" aria-labelledby="controlsTitle">
+        <div class="card-head">
+          <div><h2 id="controlsTitle">Experiment controls</h2><p>Choose a periodic signal and how many samples <i>N</i> capture one period. Press Play to sweep <i>N</i> and watch the unique window widen.</p></div>
+        </div>
+        <div class="controls">
+          <div class="field">
+            <label for="signalSelect"><span>Continuous periodic signal x(t)</span></label>
+            <select id="signalSelect">
+              <option value="threeTone">Three harmonics (the lecture waveform)</option>
+              <option value="twoTone">Two harmonics</option>
+              <option value="bump">Smooth periodic bump</option>
+              <option value="tone">Single harmonic</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="nSlider"><span>Samples per period N</span><output id="nOut">12</output></label>
+            <input id="nSlider" type="range" min="6" max="48" step="1" value="12" />
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="playBtn" type="button">▶ Play</button>
+            <button class="btn" id="resetBtn" type="button">Reset</button>
+          </div>
+        </div>
+        <div class="live-metrics" aria-live="polite">
+          <div class="metric">sampling period <b>Tₛ = T₀/N</b></div>
+          <div class="metric">unique coefficients <b id="uniqueMetric">k = 0 … 11</b></div>
+          <div class="metric">periodicity <b>c<sub>k+N</sub> = c<sub>k</sub></b></div>
+          <div class="metric warn" id="aliasWarn" hidden>copies overlap — N is too small for this signal (aliasing · see the Sampling lecture)</div>
+        </div>
+      </section>
+
+      <section class="plots">
+        <article class="card plot-card">
+          <div class="card-head">
+            <div><h2><span class="step">1</span>Sample with an impulse train</h2><p>x<sub>p</sub>(t) = x(t)·p(t) keeps only the values x[n] = x(nTₛ). One period T₀ holds exactly N of them.</p></div>
+          </div>
+          <div class="plot-wrap"><canvas id="timeCanvas" aria-label="Continuous periodic signal, impulse train, and resulting samples"></canvas><div class="tip" id="timeTip"></div></div>
+          <div class="legend">
+            <span><i class="key faint"></i> continuous x(t)</span>
+            <span><i class="key comb"></i> impulse train p(t), spacing Tₛ</span>
+            <span><i class="key"></i> samples x[n] = x(nTₛ)</span>
+          </div>
+          <div class="teaching-note">The impulse train is a <b>switch</b>: between samples, x<sub>p</sub>(t) is zero, so the Fourier-series integral only ever “sees” the N sample values. That is how ∫ becomes Σ.</div>
+        </article>
+
+        <article class="card plot-card">
+          <div class="card-head">
+            <div><h2><span class="step">2</span>Fourier series of the sampled signal — an N-periodic spectrum</h2><p>c<sub>k</sub> computed from the N samples, plotted far beyond one period. Shaded: the window k = 0 … N−1 that we keep — the seed of the DFT.</p></div>
+          </div>
+          <div class="plot-wrap tall"><canvas id="specCanvas" aria-label="Fourier series coefficient magnitudes, periodic with period N"></canvas><div class="tip" id="specTip"></div></div>
+          <div class="legend">
+            <span><i class="key"></i> |c<sub>k</sub>| in the kept window 0 … N−1</span>
+            <span><i class="key faint"></i> the same N values, repeating</span>
+            <span><i class="key true"></i> harmonics of the continuous x(t)</span>
+          </div>
+          <div class="teaching-note"><b>Only N numbers exist.</b> Because e<sup>−j2π(k+N)n/N</sup> = e<sup>−j2πkn/N</sup>, coefficient k+N is coefficient k all over again. Sampling in time made the spectrum periodic — hover any stem to see which unique coefficient it copies. The orange markers are the true harmonics of x(t): inside the central window they coincide with c<sub>k</sub> as long as the copies don’t overlap.</div>
+        </article>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const TAU = Math.PI*2;
+  const C = {ink:"#1c2333",muted:"#6b7280",grid:"#e6e8ef",blue:"#2563eb",blueSoft:"#bcc5ec",
+             comb:"#9aa3b2",orange:"#ea580c",violet:"#4f46e5",keep:"rgba(79,70,229,.07)"};
+
+  // Periodic signals as harmonic sums: {h, a, phase}. x(u) with u = t/T0 in periods.
+  const SIGNALS = {
+    threeTone:{label:"three harmonics", parts:[{h:1,a:1.2,p:-Math.PI/2},{h:2,a:0.5,p:0},{h:4,a:0.3,p:-Math.PI/2}]},
+    twoTone:{label:"two harmonics", parts:[{h:1,a:1.0,p:-Math.PI/2},{h:3,a:0.6,p:0}]},
+    bump:{label:"smooth bump", parts:[{h:0,a:0.5,p:0},{h:1,a:0.9,p:0},{h:2,a:0.45,p:0},{h:3,a:0.15,p:0}]},
+    tone:{label:"single harmonic", parts:[{h:2,a:1.0,p:0}]},
+  };
+  const defaults = {signal:"threeTone", N:12};
+  const state = {...defaults, playing:false, raf:0, last:0, hoverK:null};
+
+  function parts(){ return SIGNALS[state.signal].parts; }
+  function x(u){ let s=0; for(const q of parts()) s += q.a*Math.cos(TAU*q.h*u + q.p); return s; }
+  function hMax(){ return Math.max(...parts().map(q=>q.h)); }
+  function aliased(){ return 2*hMax() >= state.N; }
+
+  // DFS of the samples: c_k = (1/N) Σ x[n] e^{-j2πkn/N}  (T0 = N·Ts with Ts = 1)
+  function dfs(){
+    const N = state.N, mags = new Array(N);
+    for(let k=0;k<N;k++){
+      let re=0, im=0;
+      for(let n=0;n<N;n++){
+        const v = x(n/N), ang = -TAU*k*n/N;
+        re += v*Math.cos(ang); im += v*Math.sin(ang);
+      }
+      mags[k] = Math.hypot(re,im)/N;
+    }
+    return mags;
+  }
+
+  function setupCanvas(canvas){
+    const rect=canvas.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);
+    const w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height));
+    if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
+    const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);return {ctx,w,h};
+  }
+  function line(ctx,x1,y1,x2,y2,color=C.grid,width=1,dash=[]){
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.stroke();ctx.setLineDash([]);
+  }
+  function text(ctx,s,xx,yy,align="center",color=C.muted,font="11px system-ui"){
+    ctx.fillStyle=color;ctx.font=font;ctx.textAlign=align;ctx.textBaseline="middle";ctx.fillText(s,xx,yy);
+  }
+  function frame(ctx,w,h,pad,xMin,xMax,yMin,yMax){
+    const px=v=>pad.l+(v-xMin)/(xMax-xMin)*(w-pad.l-pad.r);
+    const py=v=>h-pad.b-(v-yMin)/(yMax-yMin)*(h-pad.t-pad.b);
+    for(let i=0;i<=4;i++){const yy=pad.t+i*(h-pad.t-pad.b)/4;line(ctx,pad.l,yy,w-pad.r,yy,C.grid,1);}
+    const y0=Math.max(pad.t,Math.min(h-pad.b,py(0)));
+    line(ctx,pad.l,y0,w-pad.r,y0,"#aeb4c1",1.2);
+    return {px,py,y0};
+  }
+
+  /* ---------------- time-domain plot ---------------- */
+  function drawTime(){
+    const {ctx,w,h}=setupCanvas($("timeCanvas"));
+    const p={l:44,r:16,t:16,b:36}, uMin=-0.25, uMax=2.25;
+    let amp=0.4; for(const q of parts()) amp += q.a;
+    const a=frame(ctx,w,h,p,uMin,uMax,-amp,amp*1.18);
+    text(ctx,"t",w-p.r+6,a.y0,"left",C.muted,"italic 12px Georgia");
+
+    // impulse train p(t): one small gray arrow per sample slot
+    const N=state.N, tick=Math.min(26,(h-p.t-p.b)*0.16);
+    for(let m=Math.ceil(uMin*N); m<=Math.floor(uMax*N); m++){
+      const xx=a.px(m/N);
+      line(ctx,xx,a.y0,xx,a.y0-tick,C.comb,1.1);
+      ctx.fillStyle=C.comb;ctx.beginPath();
+      ctx.moveTo(xx,a.y0-tick-3);ctx.lineTo(xx-2.4,a.y0-tick+2);ctx.lineTo(xx+2.4,a.y0-tick+2);ctx.closePath();ctx.fill();
+    }
+
+    // continuous signal (faint)
+    ctx.beginPath();
+    const M=560;
+    for(let i=0;i<=M;i++){const u=uMin+(uMax-uMin)*i/M;const xx=a.px(u),yy=a.py(x(u));i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);}
+    ctx.strokeStyle=C.blueSoft;ctx.lineWidth=2;ctx.stroke();
+
+    // samples: stems + dots
+    for(let m=Math.ceil(uMin*N); m<=Math.floor(uMax*N); m++){
+      const u=m/N,v=x(u),xx=a.px(u),yy=a.py(v);
+      line(ctx,xx,a.y0,xx,yy,C.blue,1.6);
+      ctx.fillStyle=C.blue;ctx.beginPath();ctx.arc(xx,yy,Math.max(2,Math.min(3.4,60/N)),0,TAU);ctx.fill();
+    }
+
+    // period + Ts markers
+    const yM=p.t+9;
+    line(ctx,a.px(0),yM,a.px(1),yM,C.violet,1.4);
+    line(ctx,a.px(0),yM-4,a.px(0),yM+4,C.violet,1.4);line(ctx,a.px(1),yM-4,a.px(1),yM+4,C.violet,1.4);
+    text(ctx,"T₀ = N·Tₛ",(a.px(0)+a.px(1))/2,yM+11,"center",C.violet,"italic 11px Georgia");
+    const ts1=a.px(1+2/N),ts2=a.px(1+3/N),yT=h-p.b+13;
+    line(ctx,ts1,yT,ts2,yT,C.ink,1.1);line(ctx,ts1,yT-3,ts1,yT+3,C.ink);line(ctx,ts2,yT-3,ts2,yT+3,C.ink);
+    text(ctx,"Tₛ",(ts1+ts2)/2,yT+10,"center",C.ink,"italic 10.5px Georgia");
+    [0,1,2].forEach(v=>text(ctx,v===0?"0":`${v}T₀`,a.px(v),h-p.b+13));
+  }
+
+  /* ---------------- spectrum plot ---------------- */
+  let specGeom=null;
+  function drawSpec(){
+    const {ctx,w,h}=setupCanvas($("specCanvas"));
+    const N=state.N, mags=dfs();
+    const kMin=-Math.round(1.5*N), kMax=Math.round(2.5*N);
+    let peak=0.001; for(const m of mags) peak=Math.max(peak,m);
+    for(const q of parts()) peak=Math.max(peak, q.h===0?q.a:q.a/2);
+    const p={l:46,r:16,t:20,b:40};
+    const px=v=>p.l+(v-(kMin-0.5))/((kMax+0.5)-(kMin-0.5))*(w-p.l-p.r);
+    const py=v=>h-p.b-(v/(peak*1.28))*(h-p.t-p.b);
+    specGeom={px,py,kMin,kMax,N,mags,peak};
+
+    // kept window tint (drawn beneath everything, like the slides)
+    ctx.fillStyle=C.keep;
+    ctx.fillRect(px(-0.5),p.t,px(N-0.5)-px(-0.5),h-p.t-p.b);
+
+    for(let i=0;i<=4;i++){const yy=p.t+i*(h-p.t-p.b)/4;line(ctx,p.l,yy,w-p.r,yy,C.grid,1);}
+    const y0=h-p.b;line(ctx,p.l,y0,w-p.r,y0,"#aeb4c1",1.2);
+    line(ctx,px(N-0.5)+0.5,p.t,px(N-0.5)+0.5,y0,"#8d93a3",1,[5,4]);
+
+    // stems: kept window solid, other periods faded
+    for(let k=kMin;k<=kMax;k++){
+      const m=mags[((k%N)+N)%N], xx=px(k), yy=py(m);
+      const kept=(k>=0&&k<N), hov=(state.hoverK===k);
+      ctx.globalAlpha=kept?1:0.32;
+      line(ctx,xx,y0,xx,yy,C.blue,kept?1.7:1.3);
+      ctx.fillStyle=C.blue;ctx.beginPath();ctx.arc(xx,yy,Math.max(1.5,Math.min(3.2,110/(kMax-kMin))),0,TAU);ctx.fill();
+      ctx.globalAlpha=1;
+      if(hov){ctx.strokeStyle=C.ink;ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(xx,yy,5,0,TAU);ctx.stroke();}
+    }
+
+    // true harmonics of x(t): hollow orange diamonds at k = ±h
+    for(const q of parts()){
+      const mag=q.h===0?Math.abs(q.a):Math.abs(q.a)/2;
+      const ks=q.h===0?[0]:[q.h,-q.h];
+      for(const k of ks){
+        if(k<kMin||k>kMax)continue;
+        const xx=px(k),yy=py(mag);
+        ctx.strokeStyle=C.orange;ctx.lineWidth=1.7;ctx.beginPath();
+        ctx.moveTo(xx,yy-5);ctx.lineTo(xx+5,yy);ctx.lineTo(xx,yy+5);ctx.lineTo(xx-5,yy);ctx.closePath();ctx.stroke();
+      }
+    }
+
+    // N-periodic arrow over the kept window
+    const yA=p.t+8;
+    line(ctx,px(0),yA,px(N),yA,C.violet,1.3);
+    [[px(0)],[px(N)]].forEach(([xx])=>{line(ctx,xx,yA-3,xx,yA+3,C.violet,1.3);});
+    text(ctx,"N-periodic",(px(0)+px(N))/2,yA-9,"center",C.violet,"700 11px system-ui");
+    text(ctx,"the N we keep: k = 0 … N−1",(px(0)+px(N-1))/2,h-9,"center",C.violet,"600 10.5px system-ui");
+
+    // axis ticks at multiples of N/2
+    for(let k=Math.ceil(kMin/(N/2))*(N/2);k<=kMax;k+=N/2){
+      const lbl=k===0?"0":(k%N===0?`${k/N===1?"":k/N}N`:`${k<0?"−":""}${Math.abs(k)===N/2?"N/2":Math.abs(k/N*2)+"N/2"}`);
+      const nice={[String(-N)]:"−N",[String(-N/2)]:"−N/2",[String(N/2)]:"N/2",[String(N)]:"N",[String(1.5*N)]:"3N/2",[String(2*N)]:"2N",[String(2.5*N)]:"5N/2",[String(-1.5*N)]:"−3N/2"}[String(k)]||lbl;
+      line(ctx,px(k),y0-3,px(k),y0+3,"#aeb4c1");
+      text(ctx,nice,px(k),y0+13);
+    }
+    text(ctx,"k",w-p.r+5,y0,"left",C.muted,"italic 12px Georgia");
+    text(ctx,"|cₖ|",p.l-8,p.t+6,"right",C.muted,"italic 11px Georgia");
+  }
+
+  /* ---------------- hover tooltips ---------------- */
+  function bindSpecHover(){
+    const cv=$("specCanvas"),tip=$("specTip");
+    cv.addEventListener("pointermove",e=>{
+      if(!specGeom)return;
+      const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+      const {px,kMin,kMax,N,mags}=specGeom;
+      let best=null,bd=14;
+      for(let k=kMin;k<=kMax;k++){const d=Math.abs(px(k)-mx);if(d<bd){bd=d;best=k;}}
+      state.hoverK=best;
+      if(best===null){tip.style.opacity=0;drawSpec();return;}
+      const ku=((best%N)+N)%N, m=mags[ku];
+      tip.innerHTML=`k = ${best} &nbsp;·&nbsp; |c<sub>k</sub>| = ${m.toFixed(3)}`+
+        (best===ku?`<br>inside the kept window`:`<br>copy of unique coefficient k = ${ku}`);
+      tip.style.left=Math.max(70,Math.min(r.width-70,px(best)))+"px";
+      tip.style.top=Math.max(34,my-6)+"px";
+      tip.style.opacity=1;
+      drawSpec();
+    });
+    cv.addEventListener("pointerleave",()=>{state.hoverK=null;tip.style.opacity=0;drawSpec();});
+  }
+
+  /* ---------------- wiring ---------------- */
+  function updateReadouts(){
+    $("nOut").textContent=String(state.N);
+    $("uniqueMetric").textContent=`k = 0 … ${state.N-1}`;
+    $("aliasWarn").hidden=!aliased();
+  }
+  function drawAll(){updateReadouts();drawTime();drawSpec();}
+  function stop(){state.playing=false;cancelAnimationFrame(state.raf);state.raf=0;state.last=0;$("playBtn").textContent="▶ Play";}
+  function tick(now){
+    if(!state.playing)return;
+    if(!state.last)state.last=now;
+    if(now-state.last>450){state.last=now;state.N=Math.min(48,state.N+1);$("nSlider").value=state.N;drawAll();if(state.N>=48){stop();return;}}
+    state.raf=requestAnimationFrame(tick);
+  }
+  $("playBtn").addEventListener("click",()=>{
+    if(state.playing){stop();return;}
+    if(state.N>=48){state.N=6;$("nSlider").value=6;}
+    state.playing=true;$("playBtn").textContent="❚❚ Pause";state.raf=requestAnimationFrame(tick);
+  });
+  $("resetBtn").addEventListener("click",()=>{stop();Object.assign(state,defaults,{hoverK:null});$("signalSelect").value=state.signal;$("nSlider").value=state.N;drawAll();});
+  $("signalSelect").addEventListener("change",e=>{state.signal=e.target.value;drawAll();});
+  $("nSlider").addEventListener("input",e=>{state.N=Number(e.target.value);drawAll();});
+  let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(drawAll,80);});
+  bindSpecHover();
+  drawAll();
+})();
+</script>
+</body>
+</html>
