@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>From Bins to Hertz · CSE 219</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="assets/site.css" />
+<script src="assets/site.js" defer></script>
+<style>
+  :root{
+    --violet:#4f46e5;--violet-dark:#3730a3;--violet-soft:#eef2ff;
+    --blue:#2563eb;--cyan:#0891b2;--orange:#ea580c;
+    --plot:#fbfcff;--radius:16px;
+  }
+  .content{overflow-x:hidden}
+  [hidden]{display:none!important}
+  .lab{width:100%;max-width:1240px;margin:0 auto;padding:30px 22px 80px}
+  .lab-header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px}
+  .eyebrow{color:var(--violet);font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+  .lab-header h1{font-size:30px;line-height:1.15;letter-spacing:-.03em;margin:0}
+  .lab-header p{color:var(--muted);font-size:14.5px;max-width:760px;margin:8px 0 0}
+  .limit-pill{flex:none;background:linear-gradient(135deg,#eef2ff,#f5f3ff);color:var(--violet-dark);border:1px solid #dcdcff;border-radius:14px;padding:12px 16px;font-size:14px;font-weight:800;white-space:nowrap}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:18px;min-width:0}
+  .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:14px}
+  .card-head h2{font-size:16px;letter-spacing:-.01em;margin:0}
+  .card-head p{font-size:12.8px;color:var(--muted);margin:4px 0 0;max-width:700px}
+  .step{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:25px;padding:0 8px;border-radius:999px;background:var(--violet-soft);color:var(--violet);font-size:11px;font-weight:900;margin-right:7px;vertical-align:2px}
+  .controls{display:grid;grid-template-columns:.6fr .9fr 1.2fr 1.2fr;gap:16px;align-items:end}
+  .field{min-width:0}
+  .field label{display:flex;justify-content:space-between;gap:8px;color:#4b5563;font-size:12px;font-weight:800;margin-bottom:7px}
+  .field output{color:var(--violet);font-variant-numeric:tabular-nums}
+  select{width:100%;border:1px solid #d9dce6;border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:13px;font-weight:650;padding:9px 11px;outline:none}
+  select:focus{border-color:#a5b4fc;box-shadow:0 0 0 3px #eef2ff}
+  input[type=range]{width:100%;height:5px;margin:8px 0;accent-color:var(--violet)}
+  .control-bottom{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--line);margin-top:18px;padding-top:16px;flex-wrap:wrap}
+  .segmented{display:inline-flex;background:#f3f4f8;border:1px solid var(--line);padding:3px;border-radius:11px;gap:2px}
+  .segmented button{border:0;background:transparent;color:#5b6472;font:inherit;font-size:12.5px;font-weight:800;padding:7px 11px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .segmented button.active{background:#fff;color:var(--violet);box-shadow:0 1px 4px rgba(16,24,40,.12)}
+  .live-metrics{display:flex;gap:10px;flex-wrap:wrap}
+  .metric{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:7px 10px;color:var(--muted);font-size:11.5px}
+  .metric b{color:var(--ink);font-size:12.5px;font-variant-numeric:tabular-nums;margin-left:5px}
+  .metric.warn{border-color:#fdba74;background:#fff7ed;color:#9a3412}
+  .plot-card{margin:0 0 18px}
+  .plot-wrap{height:420px;background:var(--plot);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  .tip{position:absolute;pointer-events:none;background:#1c2333;color:#fff;font-size:11.5px;line-height:1.55;padding:8px 10px;border-radius:8px;transform:translate(-50%,-112%);white-space:nowrap;opacity:0;transition:opacity .08s}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:11px;color:#596273;font-size:11.8px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .key{width:17px;height:3px;border-radius:2px;background:var(--blue);display:inline-block}
+  .key.negative{background:var(--cyan)}.key.neutral{background:#1c2333}
+  .diamond{width:9px;height:9px;border:2px solid var(--orange);transform:rotate(45deg);display:inline-block}
+  .teaching-note{background:#f8fafc;border-left:3px solid var(--violet);border-radius:0 9px 9px 0;color:#566072;font-size:12.8px;line-height:1.55;margin-top:12px;padding:9px 12px}
+  .teaching-note b{color:#303849}
+  .chain{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:4px}
+  .chain div{background:linear-gradient(135deg,#eef2ff,#f0fdfa);border:1px solid #dcdcff;border-radius:12px;padding:11px 13px;font-size:12.5px;color:#3d4457;line-height:1.5}
+  .chain b{display:block;color:var(--violet-dark);font-size:13px;margin-bottom:3px}
+  @media(max-width:1080px){.controls{grid-template-columns:1fr 1fr}.chain{grid-template-columns:1fr 1fr}.plot-wrap{height:380px}}
+  @media(max-width:680px){
+    .lab{padding:22px 14px 60px}.lab-header{display:block}.limit-pill{display:inline-block;margin-top:13px;white-space:normal}
+    .lab-header h1{font-size:25px}.card{padding:17px 15px}.controls{grid-template-columns:1fr}.chain{grid-template-columns:1fr}
+    .control-bottom{align-items:stretch;flex-direction:column}.plot-wrap{height:330px}.card-head{display:block}
+  }
+</style>
+</head>
+<body>
+<div class="site">
+  <aside class="sidebar" id="siteSidebar"></aside>
+  <main class="content">
+    <div class="lab">
+      <header class="lab-header">
+        <div>
+          <div class="eyebrow">DTFT &amp; DFT · lecture 1, part III</div>
+          <h1>From Bins to Hertz</h1>
+          <p>A DFT bin is just an index k. Relabel the axis step by step — radians per sample, radians per second, hertz — and nothing about the N numbers changes: bins 0 → N/2 still climb from dc to half the sampling rate, bins N/2 → N still hold the folded negative frequencies.</p>
+        </div>
+        <div class="limit-pill">f<sub>k</sub> = k·f<sub>s</sub>/N &nbsp;(k ≤ N/2) &nbsp;·&nbsp; (k − N)·f<sub>s</sub>/N &nbsp;(k &gt; N/2)</div>
+      </header>
+
+      <section class="card" aria-labelledby="controlsTitle">
+        <div class="card-head">
+          <div><h2 id="controlsTitle">Sampling and signal</h2><p>Sample one or two tones with a real clock. Slide a tone across the band and watch which bin it lands in — and where its negative-frequency partner shows up.</p></div>
+        </div>
+        <div class="controls">
+          <div class="field">
+            <label for="nSelect"><span>Samples N</span></label>
+            <select id="nSelect">
+              <option value="8">8</option>
+              <option value="16" selected>16</option>
+              <option value="32">32</option>
+              <option value="64">64</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="fsSelect"><span>Sampling rate f<sub>s</sub></span></label>
+            <select id="fsSelect">
+              <option value="8000" selected>8 kHz</option>
+              <option value="16000">16 kHz</option>
+              <option value="32000">32 kHz</option>
+              <option value="44100">44.1 kHz</option>
+              <option value="48000">48 kHz</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f0Slider"><span>Tone f₀ (Hz)</span><output id="f0Out">1000</output></label>
+            <input id="f0Slider" type="range" min="0" max="4000" step="25" value="1000" />
+          </div>
+          <div class="field">
+            <label for="f1Slider"><span>Second tone f₁ (Hz, 0 = off)</span><output id="f1Out">0</output></label>
+            <input id="f1Slider" type="range" min="0" max="4000" step="25" value="0" />
+          </div>
+        </div>
+        <div class="control-bottom">
+          <div class="segmented" id="viewGroup" role="group" aria-label="Bin ordering">
+            <button type="button" class="active" data-view="standard">Bins as computed: 0 … N−1</button>
+            <button type="button" data-view="centered">Centered (fftshift): −N/2 … N/2</button>
+          </div>
+          <div class="live-metrics" aria-live="polite">
+            <div class="metric" id="dfMetric">bin spacing <b>Δf = f<sub>s</sub>/N</b></div>
+            <div class="metric" id="nyqMetric">bin N/2 <b>f<sub>s</sub>/2</b></div>
+            <div class="metric" id="landMetric">f₀ lands at <b>—</b></div>
+            <div class="metric warn" id="leakWarn" hidden>f₀ is between bins — the energy leaks into the neighbours (next lecture)</div>
+          </div>
+        </div>
+      </section>
+
+      <article class="card plot-card">
+        <div class="card-head">
+          <div><h2><span class="step">|X[k]|</span>The same N bins, four rulers</h2><p>Read down the rows under any stem: k → ω<sub>k</sub> = 2πk/N → Ω<sub>k</sub> = ω<sub>k</sub>·f<sub>s</sub> → f<sub>k</sub> = Ω<sub>k</sub>/2π. Hover a stem to see its whole chain.</p></div>
+        </div>
+        <div class="plot-wrap"><canvas id="specCanvas" aria-label="DFT magnitude with bin index, digital frequency, angular frequency, and hertz rulers"></canvas><div class="tip" id="specTip"></div></div>
+        <div class="legend">
+          <span><i class="key"></i> bins 0 → N/2: positive, low → high</span>
+          <span><i class="key negative"></i> bins N/2 → N: negative, high → low</span>
+          <span><i class="key neutral"></i> k = 0 (dc) and k = N/2 (f<sub>s</sub>/2)</span>
+          <span><i class="diamond"></i> where the tones truly sit (±f₀, ±f₁)</span>
+        </div>
+        <div class="teaching-note"><b>Relabeling changes units, not samples.</b> The stems never move when you switch f<sub>s</sub>: only the Ω and f rows are rescaled. What f<sub>s</sub> does change is which <em>physical</em> frequency each bin stands for — and therefore where a given tone lands. That is exactly <code>numpy.fft.fftfreq(N, 1/fs)</code>.</div>
+      </article>
+
+      <div class="chain">
+        <div><b>k — bin index</b>0 … N−1, as the DFT computes it.</div>
+        <div><b>ω<sub>k</sub> — radians per sample</b>2πk/N. Bins past N/2 are ω − 2π: negative.</div>
+        <div><b>Ω<sub>k</sub> — radians per second</b>ω<sub>k</sub>/T<sub>s</sub> = ω<sub>k</sub>·f<sub>s</sub>. π per sample is Ω = ω<sub>s</sub>/2.</div>
+        <div><b>f<sub>k</sub> — hertz</b>Ω<sub>k</sub>/2π = k·f<sub>s</sub>/N. Bin N/2 is f<sub>s</sub>/2; the top bins are −f<sub>s</sub>/N … −Δf.</div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const TAU=Math.PI*2, PI=Math.PI;
+  const C={ink:"#1c2333",muted:"#6b7280",grid:"#e6e8ef",blue:"#2563eb",cyan:"#0891b2",orange:"#ea580c",violet:"#4f46e5",
+           tintPos:"rgba(37,99,235,.06)",tintNeg:"rgba(8,145,178,.07)"};
+  const defaults={N:16,fs:8000,f0:1000,f1:0,view:"standard"};
+  const state={...defaults,hoverK:null};
+
+  function samples(){const x=[];for(let n=0;n<state.N;n++){let v=Math.cos(TAU*state.f0*n/state.fs);if(state.f1>0)v+=0.6*Math.cos(TAU*state.f1*n/state.fs);x.push(v);}return x;}
+  function dft(x){const N=x.length,out=[];for(let k=0;k<N;k++){let re=0,im=0;for(let n=0;n<N;n++){const a=-TAU*k*n/N;re+=x[n]*Math.cos(a);im+=x[n]*Math.sin(a);}out.push(Math.hypot(re,im));}return out;}
+  const binClass=(k,N)=>k===0?"dc":(2*k===N?"nyq":(k<N/2?"pos":"neg"));
+  const binColor=cls=>cls==="pos"?C.blue:cls==="neg"?C.cyan:C.ink;
+  // the four relabelings of bin k
+  function chain(k){
+    const N=state.N,fs=state.fs,kk=k>N/2?k-N:k;      // signed index: k, or k − N past the middle
+    const w=TAU*kk/N, W=w*fs, f=kk*fs/N;
+    return {kk,w,W,f};
+  }
+  const piFrac=w=>{const r=w/PI;if(Math.abs(r)<1e-9)return "0";const s=r.toFixed(3).replace(/\.?0+$/,"");return (s==="1"?"":s==="-1"?"−":s.replace("-","−"))+"π";};
+  const kHz=f=>(Math.abs(f)>=1000?(f/1000).toFixed(Number.isInteger(f/100)?1:2).replace(/\.?0+$/,"")+" kHz":f.toFixed(0)+" Hz").replace("-","−");
+  const krad=W=>(W/1000).toFixed(1).replace(/\.0$/,"").replace("-","−")+" krad/s";
+
+  function setupCanvas(canvas){
+    const rect=canvas.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);
+    const w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height));
+    if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
+    const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);return {ctx,w,h};
+  }
+  function line(ctx,x1,y1,x2,y2,color=C.grid,width=1,dash=[]){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.stroke();ctx.setLineDash([]);}
+  function text(ctx,s,xx,yy,align="center",color=C.muted,font="11px system-ui"){ctx.fillStyle=color;ctx.font=font;ctx.textAlign=align;ctx.textBaseline="middle";ctx.fillText(s,xx,yy);}
+
+  let specGeom=null;
+  function drawSpec(){
+    const {ctx,w,h}=setupCanvas($("specCanvas"));
+    const N=state.N,x=samples(),X=dft(x),centered=state.view==="centered";
+    // displayed positions: slot index 0..N−1 (centered: slot = k + N/2 for signed kk)
+    const order=[];for(let k=0;k<N;k++){const {kk}=chain(k);order.push({k,kk,slot:centered?kk+N/2:k});}
+    const p={l:46,r:22,t:26,b:112}, y0=h-p.b;
+    const px=slot=>p.l+(slot+0.5)/N*(w-p.l-p.r);
+    let peak=0.01;X.forEach(v=>peak=Math.max(peak,v));
+    const py=v=>y0-v/(peak*1.15)*(y0-p.t);
+    // tints
+    const mid=centered?N/2:N/2;
+    if(centered){ctx.fillStyle=C.tintNeg;ctx.fillRect(px(-0.5),p.t,px(mid-0.5)-px(-0.5),y0-p.t);ctx.fillStyle=C.tintPos;ctx.fillRect(px(mid-0.5),p.t,px(N-0.5)-px(mid-0.5),y0-p.t);}
+    else {ctx.fillStyle=C.tintPos;ctx.fillRect(px(-0.5),p.t,px(mid+0.5)-px(-0.5),y0-p.t);ctx.fillStyle=C.tintNeg;ctx.fillRect(px(mid+0.5),p.t,px(N-0.5)-px(mid+0.5),y0-p.t);}
+    for(let i=0;i<=4;i++){const yy=p.t+i*(y0-p.t)/4;line(ctx,p.l,yy,w-p.r,yy,C.grid,1);}
+    line(ctx,p.l,y0,w-p.r,y0,"#aeb4c1",1.2);
+    text(ctx,centered?"negative: −fₛ/2 → 0 │ positive: 0 → fₛ/2":"positive: 0 → fₛ/2 │ negative: −fₛ/2 → 0",(p.l+w-p.r)/2,p.t+9,"center","#6b7280","600 10.5px system-ui");
+
+    // stems
+    const stems=[];
+    for(const o of order){
+      const cls=binClass(o.k,N),col=binColor(cls),xx=px(o.slot),yy=py(X[o.k]);
+      line(ctx,xx,y0,xx,yy,col,N>32?1.2:1.7);
+      ctx.fillStyle=col;ctx.beginPath();ctx.arc(xx,yy,Math.max(2,Math.min(3.6,70/N)),0,TAU);ctx.fill();
+      if(state.hoverK===o.k){ctx.strokeStyle=C.ink;ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(xx,yy,7,0,TAU);ctx.stroke();}
+      stems.push({...o,xx,yy,mag:X[o.k],cls});
+    }
+    // true tone positions: diamonds at ±f·N/fs (fractional slots)
+    const tones=[[state.f0,1],[state.f1,0.6]].filter(t=>t[0]>0);
+    for(const [f,amp] of tones){
+      for(const sgn of [1,-1]){
+        let kf=sgn*f*state.N/state.fs;                 // signed bin position
+        let slot=centered?kf+N/2:((kf%N)+N)%N;         // fold into the displayed window
+        if(!centered&&Math.abs(slot-N)<1e-9)slot=0;
+        const xx=px(slot),yy=py(amp*N/2);
+        ctx.strokeStyle=C.orange;ctx.lineWidth=1.7;ctx.beginPath();ctx.moveTo(xx,yy-6);ctx.lineTo(xx+6,yy);ctx.lineTo(xx,yy+6);ctx.lineTo(xx-6,yy);ctx.closePath();ctx.stroke();
+        text(ctx,(sgn<0?"−":"")+(f===state.f0?"f₀":"f₁"),xx,yy-13,"center",C.orange,"700 10.5px system-ui");
+      }
+    }
+
+    // rulers: four rows of labels, every `every` bins
+    const every=N>=64?8:N>=32?4:N>=16?2:1;
+    const rows=[["k",o=>String(centered?o.kk:o.k).replace("-","−"),C.ink],
+                ["ω",o=>piFrac(chain(o.k).w),null],
+                ["Ω",o=>krad(chain(o.k).W),null],
+                ["f",o=>kHz(chain(o.k).f),null]];
+    rows.forEach(([name,fn,col],i)=>{
+      const yy=y0+14+i*22;
+      text(ctx,name,p.l-8,yy,"right",C.muted,"italic 11px Georgia");
+      if(i>0)line(ctx,p.l,yy-11,w-p.r,yy-11,C.grid,1);
+      for(const o of stems){
+        const keyBin=(centered?o.kk+N/2:o.k)%every===0 || o.k===N/2;
+        if(!keyBin)continue;
+        const c=col||(o.cls==="pos"?C.blue:o.cls==="neg"?C.cyan:C.ink);
+        text(ctx,fn(o),o.xx,yy,"center",c,(i===0?"700 ":"")+"10px system-ui");
+      }
+    });
+    specGeom={stems,px,py};
+  }
+
+  function bindHover(){
+    const cvs=$("specCanvas"),tip=$("specTip");
+    cvs.addEventListener("pointermove",e=>{
+      if(!specGeom)return;const rct=cvs.getBoundingClientRect(),mx=e.clientX-rct.left;
+      let best=null,bd=14;for(const s of specGeom.stems){const d=Math.abs(s.xx-mx);if(d<bd){bd=d;best=s;}}
+      state.hoverK=best?best.k:null;
+      if(!best){tip.style.opacity=0;drawSpec();return;}
+      const c=chain(best.k),N=state.N;
+      const kind=best.cls==="dc"?"dc":best.cls==="nyq"?"half the sampling rate":best.cls==="pos"?"positive frequency":`negative frequency (k − N = ${c.kk})`;
+      tip.innerHTML=`<b>k = ${best.k}</b> &nbsp;·&nbsp; ${kind}<br>ω<sub>k</sub> = 2π·${c.kk}/${N} = ${piFrac(c.w)} rad/sample<br>Ω<sub>k</sub> = ω<sub>k</sub>·f<sub>s</sub> = ${krad(c.W)}<br>f<sub>k</sub> = Ω<sub>k</sub>/2π = ${c.kk}·f<sub>s</sub>/N = ${kHz(c.f)}<br>|X[k]| = ${best.mag.toFixed(2)}`;
+      tip.style.left=Math.max(130,Math.min(rct.width-130,best.xx))+"px";tip.style.top=Math.max(60,best.yy)+"px";tip.style.opacity=1;drawSpec();
+    });
+    cvs.addEventListener("pointerleave",()=>{state.hoverK=null;tip.style.opacity=0;drawSpec();});
+  }
+
+  function configureSliders(){
+    const half=state.fs/2,step=state.fs>=32000?100:25;
+    ["f0Slider","f1Slider"].forEach(id=>{const s=$(id);s.max=half;s.step=step;});
+    state.f0=Math.min(state.f0,half);state.f1=Math.min(state.f1,half);
+    $("f0Slider").value=state.f0;$("f1Slider").value=state.f1;
+  }
+  function updateReadouts(){
+    const N=state.N,fs=state.fs,df=fs/N,k0=state.f0/df;
+    $("f0Out").textContent=String(state.f0);$("f1Out").textContent=state.f1?String(state.f1):"off";
+    $("dfMetric").innerHTML=`bin spacing <b>Δf = f<sub>s</sub>/N = ${kHz(df)}</b>`;
+    $("nyqMetric").innerHTML=`bin N/2 = ${N/2} <b>f<sub>s</sub>/2 = ${kHz(fs/2)}</b>`;
+    const onBin=Math.abs(k0-Math.round(k0))<1e-9;
+    $("landMetric").innerHTML=`f₀ lands at <b>bin ${k0.toFixed(2).replace(/\.?0+$/,"")}${onBin?` and its partner bin ${N-Math.round(k0)}`:""}</b>`;
+    $("leakWarn").hidden=onBin||state.f0===0;
+  }
+  function drawAll(){updateReadouts();drawSpec();}
+  $("nSelect").addEventListener("change",e=>{state.N=Number(e.target.value);drawAll();});
+  $("fsSelect").addEventListener("change",e=>{state.fs=Number(e.target.value);configureSliders();drawAll();});
+  $("f0Slider").addEventListener("input",e=>{state.f0=Number(e.target.value);drawAll();});
+  $("f1Slider").addEventListener("input",e=>{state.f1=Number(e.target.value);drawAll();});
+  document.querySelectorAll("#viewGroup button").forEach(b=>b.addEventListener("click",()=>{state.view=b.dataset.view;document.querySelectorAll("#viewGroup button").forEach(x=>x.classList.toggle("active",x===b));drawAll();}));
+  let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(drawAll,80);});
+  bindHover();configureSliders();drawAll();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The DFT Samples the DTFT · CSE 219</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="assets/site.css" />
+<script src="assets/site.js" defer></script>
+<style>
+  :root{
+    --violet:#4f46e5;--violet-dark:#3730a3;--violet-soft:#eef2ff;
+    --blue:#2563eb;--cyan:#0891b2;--orange:#ea580c;
+    --plot:#fbfcff;--radius:16px;
+  }
+  .content{overflow-x:hidden}
+  [hidden]{display:none!important}
+  .lab{width:100%;max-width:1240px;margin:0 auto;padding:30px 22px 80px}
+  .lab-header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px}
+  .eyebrow{color:var(--violet);font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+  .lab-header h1{font-size:30px;line-height:1.15;letter-spacing:-.03em;margin:0}
+  .lab-header p{color:var(--muted);font-size:14.5px;max-width:760px;margin:8px 0 0}
+  .limit-pill{flex:none;background:linear-gradient(135deg,#eef2ff,#f5f3ff);color:var(--violet-dark);border:1px solid #dcdcff;border-radius:14px;padding:12px 16px;font-size:14px;font-weight:800;white-space:nowrap}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:18px;min-width:0}
+  .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:14px}
+  .card-head h2{font-size:16px;letter-spacing:-.01em;margin:0}
+  .card-head p{font-size:12.8px;color:var(--muted);margin:4px 0 0;max-width:700px}
+  .step{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:25px;padding:0 8px;border-radius:999px;background:var(--violet-soft);color:var(--violet);font-size:11px;font-weight:900;margin-right:7px;vertical-align:2px}
+  .controls{display:grid;grid-template-columns:1.3fr .6fr 1fr;gap:16px;align-items:end}
+  .field{min-width:0}
+  .field label{display:flex;justify-content:space-between;gap:8px;color:#4b5563;font-size:12px;font-weight:800;margin-bottom:7px}
+  .field output{color:var(--violet);font-variant-numeric:tabular-nums}
+  .field.off{visibility:hidden}
+  select{width:100%;border:1px solid #d9dce6;border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:13px;font-weight:650;padding:9px 11px;outline:none}
+  select:focus{border-color:#a5b4fc;box-shadow:0 0 0 3px #eef2ff}
+  input[type=range]{width:100%;height:5px;margin:8px 0;accent-color:var(--violet)}
+  .control-bottom{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--line);margin-top:18px;padding-top:16px;flex-wrap:wrap}
+  .seg-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .seg-label{font-size:12px;font-weight:800;color:#4b5563}
+  .segmented{display:inline-flex;background:#f3f4f8;border:1px solid var(--line);padding:3px;border-radius:11px;gap:2px}
+  .segmented button{border:0;background:transparent;color:#5b6472;font:inherit;font-size:12.5px;font-weight:800;padding:7px 11px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .segmented button.active{background:#fff;color:var(--violet);box-shadow:0 1px 4px rgba(16,24,40,.12)}
+  .live-metrics{display:flex;gap:10px;flex-wrap:wrap}
+  .metric{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:7px 10px;color:var(--muted);font-size:11.5px}
+  .metric b{color:var(--ink);font-size:12.5px;font-variant-numeric:tabular-nums;margin-left:5px}
+  .plots{display:grid;grid-template-columns:1fr;gap:18px}
+  .plot-card{margin:0}
+  .plot-wrap{height:240px;background:var(--plot);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative}
+  .plot-wrap.tall{height:360px}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  .tip{position:absolute;pointer-events:none;background:#1c2333;color:#fff;font-size:11.5px;line-height:1.5;padding:7px 9px;border-radius:8px;transform:translate(-50%,-112%);white-space:nowrap;opacity:0;transition:opacity .08s}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:11px;color:#596273;font-size:11.8px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .key{width:17px;height:3px;border-radius:2px;background:var(--blue);display:inline-block}
+  .key.negative{background:var(--cyan)}.key.neutral{background:#1c2333}.key.curve{background:#b4bac8}.key.zero{background:#d4d8e2}
+  .ring{width:11px;height:11px;border-radius:50%;border:2px solid var(--orange);display:inline-block}
+  .teaching-note{background:#f8fafc;border-left:3px solid var(--violet);border-radius:0 9px 9px 0;color:#566072;font-size:12.8px;line-height:1.55;margin-top:12px;padding:9px 12px}
+  .teaching-note b{color:#303849}
+  .mantra{background:linear-gradient(135deg,#eef2ff,#f0fdfa);border:1px solid #dcdcff;border-radius:12px;padding:12px 16px;margin-top:4px;font-size:13px;color:#3d4457;line-height:1.6}
+  .mantra b{color:var(--violet-dark)}
+  @media(max-width:1080px){.controls{grid-template-columns:1fr 1fr}.plot-wrap.tall{height:320px}}
+  @media(max-width:680px){
+    .lab{padding:22px 14px 60px}.lab-header{display:block}.limit-pill{display:inline-block;margin-top:13px;white-space:normal}
+    .lab-header h1{font-size:25px}.card{padding:17px 15px}.controls{grid-template-columns:1fr}
+    .control-bottom{align-items:stretch;flex-direction:column}.plot-wrap{height:210px}.plot-wrap.tall{height:280px}.card-head{display:block}
+  }
+</style>
+</head>
+<body>
+<div class="site">
+  <aside class="sidebar" id="siteSidebar"></aside>
+  <main class="content">
+    <div class="lab">
+      <header class="lab-header">
+        <div>
+          <div class="eyebrow">DTFT &amp; DFT · lecture 1, part III</div>
+          <h1>The DFT Samples the DTFT</h1>
+          <p>Take N samples, compute their DTFT — a continuous curve — and the N-point DFT is that curve read at ω = 2πk/N. Append zeros and the DFT reads the <em>same</em> curve at more points. More pixels, not more information.</p>
+        </div>
+        <div class="limit-pill">X[k] = X(e<sup>jω</sup>)|<sub>ω = 2πk/M</sub></div>
+      </header>
+
+      <section class="card" aria-labelledby="controlsTitle">
+        <div class="card-head">
+          <div><h2 id="controlsTitle">Signal and padding</h2><p>N real samples carry all the information. Zero-padding to M = N, 2N, 4N, 8N samples changes only how finely the DTFT is sampled.</p></div>
+        </div>
+        <div class="controls">
+          <div class="field">
+            <label for="signalSelect"><span>Signal x[n], n = 0 … N−1</span></label>
+            <select id="signalSelect">
+              <option value="tone">Windowed tone, c cycles per N samples</option>
+              <option value="twoClose">Two close tones, c and c + 0.7 cycles</option>
+              <option value="rect">Rectangular pulse, length L</option>
+              <option value="expo">Decaying exponential 0.8ⁿ</option>
+              <option value="triangle">Triangle</option>
+              <option value="random">Random samples</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="nSelect"><span>Samples N</span></label>
+            <select id="nSelect">
+              <option value="8">8</option>
+              <option value="16" selected>16</option>
+              <option value="32">32</option>
+              <option value="64">64</option>
+            </select>
+          </div>
+          <div class="field" id="paramField">
+            <label for="paramSlider"><span id="paramName">Cycles c per N samples</span><output id="paramOut">3</output></label>
+            <input id="paramSlider" type="range" min="0" max="8" step="0.1" value="3" />
+          </div>
+        </div>
+        <div class="control-bottom">
+          <div class="seg-row">
+            <span class="seg-label">Zero-pad to M =</span>
+            <div class="segmented" id="padGroup" role="group" aria-label="Zero padding factor">
+              <button type="button" class="active" data-pad="1">N (no padding)</button>
+              <button type="button" data-pad="2">2N</button>
+              <button type="button" data-pad="4">4N</button>
+              <button type="button" data-pad="8">8N</button>
+            </div>
+            <div class="segmented" id="viewGroup" role="group" aria-label="Bin ordering">
+              <button type="button" class="active" data-view="standard">Bins 0 … M−1</button>
+              <button type="button" data-view="centered">Centered −M/2 … M/2</button>
+            </div>
+          </div>
+          <div class="live-metrics" aria-live="polite">
+            <div class="metric" id="spacingMetric">bin spacing <b>Δω = 2π/M</b></div>
+            <div class="metric" id="infoMetric">information <b>N numbers</b></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="plots">
+        <article class="card plot-card">
+          <div class="card-head">
+            <div><h2><span class="step">time</span>x[n], padded to M samples</h2><p>Blue: the N measured samples. Hollow: the appended zeros. They add no information — they only lengthen the transform.</p></div>
+          </div>
+          <div class="plot-wrap"><canvas id="timeCanvas" aria-label="Signal with zero padding"></canvas><div class="tip" id="timeTip"></div></div>
+          <div class="legend">
+            <span><i class="key"></i> x[n], n &lt; N</span>
+            <span><i class="key zero"></i> padded zeros, N ≤ n &lt; M</span>
+          </div>
+        </article>
+
+        <article class="card plot-card">
+          <div class="card-head">
+            <div><h2><span class="step">freq</span>|X(e<sup>jω</sup>)| and the M-point DFT</h2><p id="specCaption">The gray curve is the DTFT of the N samples. Stems are the DFT bins, sitting exactly on it at ω = 2πk/M. Hover a stem to identify it.</p></div>
+          </div>
+          <div class="plot-wrap tall"><canvas id="specCanvas" aria-label="DTFT curve with DFT samples"></canvas><div class="tip" id="specTip"></div></div>
+          <div class="legend">
+            <span><i class="key curve"></i> DTFT |X(e<sup>jω</sup>)| of the N samples</span>
+            <span><i class="key"></i> bins 0 → M/2: positive, low → high</span>
+            <span><i class="key negative"></i> bins M/2 → M: negative, high → low</span>
+            <span><i class="key neutral"></i> k = 0 (dc) and k = M/2 (ω = π)</span>
+            <span id="ringKey" hidden><i class="ring"></i> the original N-point bins</span>
+          </div>
+          <div class="teaching-note" id="specNote"></div>
+        </article>
+      </section>
+
+      <div class="mantra"><b>Same curve, denser samples.</b> Zero-padding interpolates the DTFT — it makes the plot prettier and lets you locate a peak more precisely, but it cannot separate two tones the N samples could not separate. Try “two close tones”: pad to 8N and the bump stays one bump; raise N and it splits.</div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const TAU = Math.PI*2, PI = Math.PI;
+  const C = {ink:"#1c2333",muted:"#6b7280",grid:"#e6e8ef",blue:"#2563eb",cyan:"#0891b2",orange:"#ea580c",violet:"#4f46e5",
+             curve:"#b4bac8",zero:"#cfd3dd",tintPos:"rgba(37,99,235,.06)",tintNeg:"rgba(8,145,178,.07)"};
+  const SIGNALS = {
+    tone:{param:{name:"Cycles c per N samples",min:0,max:8,step:0.1,val:3}, build:(N,c)=>{const x=[];for(let n=0;n<N;n++)x.push(Math.cos(TAU*c*n/N));return x;},
+      note:`<b>Windowed tone.</b> With an integer number of cycles the tone lands on a bin and the DTFT’s zeros land on all the others — the N-point DFT shows one clean stem per side. Make c non-integer: the DTFT is unchanged in character but the bins now sample its skirts — that is <em>leakage</em>, and zero-padding reveals the full shape the N bins were hiding.`},
+    twoClose:{param:{name:"Cycles c of the first tone",min:0,max:8,step:0.1,val:3}, build:(N,c)=>{const x=[];for(let n=0;n<N;n++)x.push(Math.cos(TAU*c*n/N)+Math.cos(TAU*(c+0.7)*n/N));return x;},
+      note:`<b>Two close tones, 0.7 cycles apart.</b> Their DTFT lobes overlap into a single bump because only N samples were taken. Zero-padding draws that bump in more detail; it never turns it into two. Only more <em>real</em> samples (larger N) do.`},
+    rect:{param:{name:"Pulse length L",min:1,max:16,step:1,val:4}, build:(N,L)=>{const x=[];for(let n=0;n<N;n++)x.push(n<L?1:0);return x;},
+      note:`<b>Rectangular pulse.</b> The DTFT is the sin(ωL/2)/sin(ω/2) lobe pattern. The N-point DFT samples it at 2πk/N; with L dividing N some bins land exactly on the zeros. Pad and the side lobes appear in full.`},
+    expo:{param:null, build:(N)=>{const x=[];for(let n=0;n<N;n++)x.push(Math.pow(0.8,n));return x;},
+      note:`<b>Decaying exponential.</b> A smooth lowpass spectrum: large near ω = 0 and near 2π (the same frequency), smallest at ω = π. Bins 0 → N/2 walk up the positive side, bins N/2 → N walk back along the folded negative side.`},
+    triangle:{param:null, build:(N)=>{const x=[];for(let n=0;n<N;n++)x.push(1-Math.abs(n-N/2)/(N/2));return x;},
+      note:`<b>Triangle.</b> The square of the pulse spectrum, so the side lobes fall off faster. Compare the heights of the first side lobes with the rectangular pulse.`},
+    random:{param:null, build:(N)=>{const x=[];let s=12345;for(let n=0;n<N;n++){s=(s*1103515245+12345)%2147483648;x.push(s/2147483648*2-1);}return x;},
+      note:`<b>Random samples.</b> A spectrum with no structure to speak of — but still a continuous curve that the bins sample, and still symmetric about ω = π because the samples are real.`},
+  };
+  const defaults={signal:"tone",N:16,pad:1,view:"standard"};
+  const state={...defaults,param:3,hoverK:null};
+
+  function spec(){return SIGNALS[state.signal];}
+  function samples(){const S=spec();return S.param?S.build(state.N,state.param):S.build(state.N);}
+  function M(){return state.N*state.pad;}
+  function dtft(x,w){let re=0,im=0;for(let n=0;n<x.length;n++){re+=x[n]*Math.cos(w*n);im-=x[n]*Math.sin(w*n);}return Math.hypot(re,im);}
+  function dft(x,Mlen){const out=[];for(let k=0;k<Mlen;k++)out.push(dtft(x,TAU*k/Mlen));return out;}
+  const binClass=(k,Mlen)=>k===0?"dc":(2*k===Mlen?"nyq":(k<Mlen/2?"pos":"neg"));
+  const binColor=cls=>cls==="pos"?C.blue:cls==="neg"?C.cyan:C.ink;
+
+  function setupCanvas(canvas){
+    const rect=canvas.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);
+    const w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height));
+    if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
+    const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);return {ctx,w,h};
+  }
+  function line(ctx,x1,y1,x2,y2,color=C.grid,width=1,dash=[]){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.stroke();ctx.setLineDash([]);}
+  function text(ctx,s,xx,yy,align="center",color=C.muted,font="11px system-ui"){ctx.fillStyle=color;ctx.font=font;ctx.textAlign=align;ctx.textBaseline="middle";ctx.fillText(s,xx,yy);}
+  const piFrac=w=>{const r=w/PI;if(Math.abs(r)<1e-9)return "0";const s=r.toFixed(3).replace(/\.?0+$/,"");return (s==="1"?"":s==="-1"?"−":s.replace("-","−"))+"π";};
+
+  /* ---------------- time ---------------- */
+  let timeGeom=null;
+  function drawTime(){
+    const {ctx,w,h}=setupCanvas($("timeCanvas"));
+    const x=samples(),N=state.N,Mlen=M();
+    let vMax=0.2;x.forEach(v=>vMax=Math.max(vMax,Math.abs(v)));
+    const p={l:40,r:16,t:16,b:30};
+    const px=n=>p.l+(n+0.5)/Mlen*(w-p.l-p.r), py=v=>h-p.b-(v+vMax*1.15)/(2.3*vMax)*(h-p.t-p.b);
+    for(let i=0;i<=4;i++){const yy=p.t+i*(h-p.t-p.b)/4;line(ctx,p.l,yy,w-p.r,yy,C.grid,1);}
+    const y0=py(0);line(ctx,p.l,y0,w-p.r,y0,"#aeb4c1",1.2);
+    const r=Math.max(1.6,Math.min(3.4,160/Mlen));
+    for(let n=0;n<Mlen;n++){
+      const xx=px(n);
+      if(n<N){const yy=py(x[n]);line(ctx,xx,y0,xx,yy,C.blue,Mlen>64?1:1.5);ctx.fillStyle=C.blue;ctx.beginPath();ctx.arc(xx,yy,r,0,TAU);ctx.fill();}
+      else {ctx.strokeStyle=C.zero;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(xx,y0,r,0,TAU);ctx.stroke();}
+    }
+    // brackets
+    const yB=p.t+8;
+    line(ctx,px(0),yB,px(N-1),yB,C.blue,1.3);text(ctx,`N = ${N} samples`,(px(0)+px(N-1))/2,yB-0+9,"center",C.blue,"600 10.5px system-ui");
+    if(Mlen>N){line(ctx,px(N),yB,px(Mlen-1),yB,"#9aa3b2",1.3);text(ctx,`${Mlen-N} zeros`,(px(N)+px(Mlen-1))/2,yB+9,"center","#6b7280","600 10.5px system-ui");}
+    const every=Mlen>=64?16:Mlen>=32?8:4;
+    for(let n=0;n<Mlen;n+=every)text(ctx,String(n),px(n),h-p.b+12);
+    text(ctx,"n",w-p.r+6,y0,"left",C.muted,"italic 12px Georgia");
+    text(ctx,"x[n]",p.l-6,p.t+6,"right",C.muted,"italic 11px Georgia");
+    timeGeom={px,py,x,N,Mlen};
+  }
+
+  /* ---------------- spectrum ---------------- */
+  let specGeom=null;
+  function drawSpec(){
+    const {ctx,w,h}=setupCanvas($("specCanvas"));
+    const x=samples(),N=state.N,Mlen=M(),X=dft(x,Mlen),centered=state.view==="centered";
+    const lo=centered?-PI:0, hi=centered?PI:TAU;
+    const p={l:46,r:18,t:24,b:52}, y0=h-p.b;
+    const px=v=>p.l+(v-lo)/(hi-lo)*(w-p.l-p.r);
+    let peak=0.01;const K=900,curve=[];
+    for(let i=0;i<=K;i++){const w_=lo+(hi-lo)*i/K;const m=dtft(x,w_);curve.push([w_,m]);peak=Math.max(peak,m);}
+    const py=v=>y0-v/(peak*1.15)*(y0-p.t);
+    // tints: positive half / negative half
+    if(centered){ctx.fillStyle=C.tintNeg;ctx.fillRect(px(-PI),p.t,px(0)-px(-PI),y0-p.t);ctx.fillStyle=C.tintPos;ctx.fillRect(px(0),p.t,px(PI)-px(0),y0-p.t);}
+    else {ctx.fillStyle=C.tintPos;ctx.fillRect(px(0),p.t,px(PI)-px(0),y0-p.t);ctx.fillStyle=C.tintNeg;ctx.fillRect(px(PI),p.t,px(TAU)-px(PI),y0-p.t);}
+    for(let i=0;i<=4;i++){const yy=p.t+i*(y0-p.t)/4;line(ctx,p.l,yy,w-p.r,yy,C.grid,1);}
+    line(ctx,p.l,y0,w-p.r,y0,"#aeb4c1",1.2);
+    line(ctx,px(centered?0:PI),p.t,px(centered?0:PI),y0,"#8d93a3",1,[5,4]);
+    // DTFT curve
+    ctx.beginPath();curve.forEach(([w_,m],i)=>{const xx=px(w_),yy=py(m);i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);});
+    ctx.strokeStyle=C.curve;ctx.lineWidth=2.2;ctx.stroke();
+    // bins
+    const stems=[];
+    for(let k=0;k<Mlen;k++){
+      let wk=TAU*k/Mlen; if(centered&&wk>=PI)wk-=TAU;
+      if(centered&&2*k===Mlen){ /* k = M/2 sits at −π in the centered view; draw it at both edges */ }
+      const cls=binClass(k,Mlen), col=binColor(cls), xx=px(wk), yy=py(X[k]);
+      const hov=state.hoverK===k;
+      line(ctx,xx,y0,xx,yy,col,Mlen>64?1:1.5);
+      ctx.fillStyle=col;ctx.beginPath();ctx.arc(xx,yy,Math.max(1.8,Math.min(3.4,130/Mlen)),0,TAU);ctx.fill();
+      if(state.pad>1&&k%state.pad===0){ctx.strokeStyle=C.orange;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(xx,yy,Math.max(4,Math.min(6,220/Mlen)),0,TAU);ctx.stroke();}
+      if(hov){ctx.strokeStyle=C.ink;ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(xx,yy,7,0,TAU);ctx.stroke();}
+      stems.push({k,wk,xx,yy,mag:X[k],cls});
+    }
+    // bin-index ruler + ω ticks
+    const labelEvery=Mlen>=64?Mlen/8:Mlen>=32?Mlen/8:Mlen>=16?Mlen/8:1;
+    stems.forEach(s=>{ if(s.k%labelEvery===0){text(ctx,String(centered&&s.k>Mlen/2?s.k-Mlen:s.k).replace("-","−"),s.xx,y0+11,"center",C.muted,"10px system-ui");} });
+    text(ctx,"k",p.l-8,y0+11,"right",C.muted,"italic 10.5px Georgia");
+    const ticks=centered?[[-PI,"−π"],[-PI/2,"−π/2"],[0,"0"],[PI/2,"π/2"],[PI,"π"]]:[[0,"0"],[PI/2,"π/2"],[PI,"π"],[3*PI/2,"3π/2"],[TAU,"2π"]];
+    ticks.forEach(([v,l])=>{line(ctx,px(v),y0+22,px(v),y0+26,"#aeb4c1");text(ctx,l,px(v),y0+34,"center",C.muted,"10.5px system-ui");});
+    text(ctx,"ω",p.l-8,y0+34,"right",C.muted,"italic 10.5px Georgia");
+    text(ctx,"|X|",p.l-6,p.t+6,"right",C.muted,"italic 11px Georgia");
+    text(ctx,centered?"negative ← │ → positive":"positive: low → high │ negative: high → low",(p.l+w-p.r)/2,p.t+9,"center","#6b7280","600 10.5px system-ui");
+    specGeom={stems,px,py};
+  }
+
+  /* ---------------- hover ---------------- */
+  function bindSpecHover(){
+    const cvs=$("specCanvas"),tip=$("specTip");
+    cvs.addEventListener("pointermove",e=>{
+      if(!specGeom)return;const rct=cvs.getBoundingClientRect(),mx=e.clientX-rct.left,my=e.clientY-rct.top;
+      let best=null,bd=12;for(const s of specGeom.stems){const d=Math.abs(s.xx-mx);if(d<bd){bd=d;best=s;}}
+      state.hoverK=best?best.k:null;
+      if(!best){tip.style.opacity=0;drawSpec();return;}
+      const Mlen=M(),N=state.N,orig=state.pad>1&&best.k%state.pad===0;
+      const where=best.cls==="dc"?"dc":best.cls==="nyq"?"ω = π, the highest frequency":best.cls==="pos"?"positive frequency":`negative frequency, same as k − M = ${best.k-Mlen}`;
+      tip.innerHTML=`k = ${best.k} of M = ${Mlen} &nbsp;·&nbsp; ω<sub>k</sub> = 2πk/M = ${piFrac(TAU*best.k/Mlen)}<br>|X[k]| = ${best.mag.toFixed(3)} = |X(e<sup>jω</sup>)| at ω<sub>k</sub><br>${where}`+
+        (orig?`<br>also bin ${best.k/state.pad} of the original ${N}-point DFT`:(state.pad>1?`<br>new sample — not in the ${N}-point DFT`:""));
+      tip.style.left=Math.max(120,Math.min(rct.width-120,best.xx))+"px";tip.style.top=Math.max(46,best.yy)+"px";tip.style.opacity=1;drawSpec();
+    });
+    cvs.addEventListener("pointerleave",()=>{state.hoverK=null;tip.style.opacity=0;drawSpec();});
+  }
+  function bindTimeHover(){
+    const cvs=$("timeCanvas"),tip=$("timeTip");
+    cvs.addEventListener("pointermove",e=>{
+      if(!timeGeom)return;const rct=cvs.getBoundingClientRect(),mx=e.clientX-rct.left;
+      const n=Math.floor((mx-40)/(rct.width-40-16)*timeGeom.Mlen);if(n<0||n>=timeGeom.Mlen){tip.style.opacity=0;return;}
+      const v=n<timeGeom.N?timeGeom.x[n]:0;
+      tip.innerHTML=n<timeGeom.N?`n = ${n} &nbsp;·&nbsp; x[n] = ${v.toFixed(3)}`:`n = ${n} &nbsp;·&nbsp; padded zero`;
+      tip.style.left=timeGeom.px(n)+"px";tip.style.top=timeGeom.py(v)+"px";tip.style.opacity=1;
+    });
+    cvs.addEventListener("pointerleave",()=>{tip.style.opacity=0;});
+  }
+
+  /* ---------------- wiring ---------------- */
+  function configureParam(){
+    const S=spec(),f=$("paramField");
+    if(!S.param){f.classList.add("off");return;}
+    f.classList.remove("off");const sl=$("paramSlider");sl.min=S.param.min;sl.max=S.param.max;sl.step=S.param.step;sl.value=state.param;$("paramName").textContent=S.param.name;
+  }
+  function updateReadouts(){
+    const S=spec(),Mlen=M();
+    if(S.param)$("paramOut").textContent=Number.isInteger(S.param.step)?String(state.param):state.param.toFixed(1);
+    $("spacingMetric").innerHTML=`bin spacing <b>Δω = 2π/${Mlen} = ${piFrac(TAU/Mlen)}</b>`;
+    $("infoMetric").innerHTML=`information <b>${state.N} numbers</b> &nbsp;·&nbsp; samples of the DTFT <b>${Mlen}</b>`;
+    $("ringKey").hidden=state.pad===1;
+    $("specNote").innerHTML=S.note;
+    $("specCaption").innerHTML=state.pad===1?"The gray curve is the DTFT of the N samples. Stems are the DFT bins, sitting exactly on it at ω = 2πk/N. Hover a stem to identify it.":`Zero-padded to M = ${Mlen}: the stems now sample the <em>same</em> gray curve every 2π/M. Orange rings mark the bins the plain N-point DFT already had.`;
+  }
+  function drawAll(){updateReadouts();drawTime();drawSpec();}
+  function selectSignal(name){state.signal=name;const S=spec();state.param=S.param?S.param.val:0;if(S.param&&S.param.name.includes("length")&&state.param>state.N)state.param=state.N/4;configureParam();drawAll();}
+  $("signalSelect").addEventListener("change",e=>selectSignal(e.target.value));
+  $("nSelect").addEventListener("change",e=>{state.N=Number(e.target.value);const S=spec();if(S.param&&S.param.name.includes("length")){$("paramSlider").max=state.N;}drawAll();});
+  $("paramSlider").addEventListener("input",e=>{state.param=Number(e.target.value);drawAll();});
+  document.querySelectorAll("#padGroup button").forEach(b=>b.addEventListener("click",()=>{state.pad=Number(b.dataset.pad);document.querySelectorAll("#padGroup button").forEach(x=>x.classList.toggle("active",x===b));drawAll();}));
+  document.querySelectorAll("#viewGroup button").forEach(b=>b.addEventListener("click",()=>{state.view=b.dataset.view;document.querySelectorAll("#viewGroup button").forEach(x=>x.classList.toggle("active",x===b));drawAll();}));
+  let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(drawAll,80);});
+  bindSpecHover();bindTimeHover();
+  selectSignal(state.signal);
+})();
+</script>
+</body>
+</html>
