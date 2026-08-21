@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aperiodic Signals: DTFT → DFT · CSE 219</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="assets/site.css" />
+<script src="assets/site.js" defer></script>
+<script src="assets/fourier-lab.js"></script>
+<style>
+  :root{--violet:#4f46e5;--violet-dark:#3730a3;--violet-soft:#eef2ff;--blue:#2563eb;--cyan:#0891b2;--orange:#ea580c;--plot:#fbfcff;--radius:16px}
+  .content{overflow-x:hidden}
+  [hidden]{display:none!important}
+  .lab{width:100%;max-width:1240px;margin:0 auto;padding:30px 22px 80px}
+  .lab-header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px}
+  .eyebrow{color:var(--violet);font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+  .lab-header h1{font-size:30px;line-height:1.15;letter-spacing:-.03em;margin:0}
+  .lab-header p{color:var(--muted);font-size:14.5px;max-width:760px;margin:8px 0 0}
+  .limit-pill{flex:none;background:linear-gradient(135deg,#eef2ff,#f5f3ff);color:var(--violet-dark);border:1px solid #dcdcff;border-radius:14px;padding:12px 16px;font-size:14px;font-weight:800;white-space:nowrap}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:18px;min-width:0}
+  .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:14px}
+  .card-head h2{font-size:16px;letter-spacing:-.01em;margin:0}
+  .card-head p{font-size:12.8px;color:var(--muted);margin:4px 0 0;max-width:720px}
+  .step{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:25px;padding:0 8px;border-radius:999px;background:var(--violet-soft);color:var(--violet);font-size:11px;font-weight:900;margin-right:7px;vertical-align:2px}
+  .controls{display:grid;grid-template-columns:1.4fr .8fr .9fr 1fr;gap:16px;align-items:end}
+  .field{min-width:0}
+  .field label{display:flex;justify-content:space-between;gap:8px;color:#4b5563;font-size:12px;font-weight:800;margin-bottom:7px}
+  .field output{color:var(--violet);font-variant-numeric:tabular-nums}
+  .field.off{visibility:hidden}
+  select{width:100%;border:1px solid #d9dce6;border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:13px;font-weight:650;padding:9px 11px;outline:none}
+  select:focus{border-color:#a5b4fc;box-shadow:0 0 0 3px #eef2ff}
+  input[type=range]{width:100%;height:5px;margin:8px 0;accent-color:var(--violet)}
+  .control-bottom{display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid var(--line);margin-top:18px;padding-top:16px;flex-wrap:wrap}
+  .seg-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .seg-label{font-size:12px;font-weight:800;color:#4b5563}
+  .segmented{display:inline-flex;background:#f3f4f8;border:1px solid var(--line);padding:3px;border-radius:11px;gap:2px}
+  .segmented button{border:0;background:transparent;color:#5b6472;font:inherit;font-size:12.5px;font-weight:800;padding:7px 11px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .segmented button.active{background:#fff;color:var(--violet);box-shadow:0 1px 4px rgba(16,24,40,.12)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .chips .lbl{font-size:11.5px;font-weight:800;color:#6b7280;letter-spacing:.04em;text-transform:uppercase;margin-right:2px}
+  .chip{border:1px solid #d9dce6;background:#fff;color:#5b6472;border-radius:999px;padding:6px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+  .chip::before{content:"○";margin-right:6px;color:#b0b6c4}
+  .chip.on{background:var(--violet-soft);border-color:#c7cbff;color:var(--violet-dark)}
+  .chip.on::before{content:"●";color:var(--violet)}
+  .live-metrics{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .metric{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:7px 10px;color:var(--muted);font-size:11.5px}
+  .metric b{color:var(--ink);font-size:12.5px;font-variant-numeric:tabular-nums;margin-left:5px}
+  .plot-card{margin:0 0 18px}
+  .plot-wrap{height:260px;background:var(--plot);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative}
+  .plot-wrap.spec{height:400px}.plot-wrap.phase{height:220px}.plot-wrap.wind{height:360px}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  #specCanvas{cursor:pointer}#timeCanvas.draw{cursor:crosshair}
+  .tip{position:absolute;pointer-events:none;background:#1c2333;color:#fff;font-size:11.5px;line-height:1.55;padding:8px 10px;border-radius:8px;transform:translate(-50%,-112%);white-space:nowrap;opacity:0;transition:opacity .08s}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:11px;color:#596273;font-size:11.8px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .key{width:17px;height:3px;border-radius:2px;background:var(--blue);display:inline-block}
+  .key.faint{background:#bcc5ec}.key.negative{background:var(--cyan)}.key.neutral{background:#1c2333}.key.curve{background:#b4bac8}.key.zero{background:#d4d8e2}.key.centroid{background:var(--orange)}.key.angle{background:var(--violet)}
+  .ring{width:11px;height:11px;border-radius:50%;border:2px solid var(--orange);display:inline-block}
+  .teaching-note{background:#f8fafc;border-left:3px solid var(--violet);border-radius:0 9px 9px 0;color:#566072;font-size:12.8px;line-height:1.55;margin-top:12px;padding:9px 12px}
+  .teaching-note b{color:#303849}
+  .wind-controls{display:grid;grid-template-columns:1.4fr auto;gap:14px;align-items:end;margin-bottom:12px}
+  .mantra{background:linear-gradient(135deg,#eef2ff,#f0fdfa);border:1px solid #dcdcff;border-radius:12px;padding:12px 16px;margin-top:4px;font-size:13px;color:#3d4457;line-height:1.6}
+  .mantra b{color:var(--violet-dark)}
+  @media(max-width:1080px){.controls{grid-template-columns:1fr 1fr}.plot-wrap{height:240px}.plot-wrap.spec{height:360px}.plot-wrap.wind{height:320px}.wind-controls{grid-template-columns:1fr}}
+  @media(max-width:680px){.lab{padding:22px 14px 60px}.lab-header{display:block}.limit-pill{display:inline-block;margin-top:13px;white-space:normal}.lab-header h1{font-size:25px}.card{padding:17px 15px}.controls{grid-template-columns:1fr}.control-bottom{align-items:stretch;flex-direction:column}.plot-wrap{height:220px}.plot-wrap.spec{height:330px}.card-head{display:block}}
+</style>
+</head>
+<body>
+<div class="site">
+  <aside class="sidebar" id="siteSidebar"></aside>
+  <main class="content">
+    <div class="lab">
+      <header class="lab-header">
+        <div>
+          <div class="eyebrow">DTFT &amp; DFT · lecture 1 · aperiodic signals</div>
+          <h1>Aperiodic Signals: DTFT → DFT</h1>
+          <p>A signal that never repeats, N samples of it, and what a computer can do with them. Pick or draw a window, choose the sampling rate and N, and read the continuous 2π-periodic DTFT, the DFT that samples it, the effect of zero-padding, and every bin in hertz. Winding, phase and the full periodic view wait behind toggles.</p>
+        </div>
+        <div class="limit-pill">X[k] = X(e<sup>jω</sup>)|<sub>ω = 2πk/M</sub></div>
+      </header>
+
+      <section class="card" aria-labelledby="controlsTitle">
+        <div class="card-head">
+          <div><h2 id="controlsTitle">Signal and sampling</h2><p>The signal lives on a window of N samples taken at f<sub>s</sub>; outside the window it is zero. Zero-pad to M = 2N … 8N to sample its DTFT more finely.</p></div>
+        </div>
+        <div class="controls">
+          <div class="field">
+            <label for="signalSelect"><span>Signal x(t) on the window</span></label>
+            <select id="signalSelect">
+              <option value="cosine">Shifted cosine segment 1 + cos (3Blue1Brown)</option>
+              <option value="tone">Windowed tone cos, c cycles in the window</option>
+              <option value="twoClose">Two close tones, c and c + 0.7 cycles</option>
+              <option value="rect">Rectangular pulse, length L</option>
+              <option value="expo">Decaying exponential aⁿ</option>
+              <option value="twoSided">Two-sided decay a^|n−N/2|</option>
+              <option value="triangle">Triangle</option>
+              <option value="sinc">Truncated ideal lowpass (sinc)</option>
+              <option value="random">Random samples</option>
+              <option value="custom">Custom — draw the window</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="fsSelect"><span>Sampling rate f<sub>s</sub></span></label>
+            <select id="fsSelect">
+              <option value="1000">1 kHz</option><option value="8000" selected>8 kHz</option><option value="16000">16 kHz</option><option value="44100">44.1 kHz</option><option value="48000">48 kHz</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="nSlider"><span>Samples N</span><output id="nOut">16</output></label>
+            <input id="nSlider" type="range" min="4" max="64" step="1" value="16" />
+          </div>
+          <div class="field" id="paramField">
+            <label for="paramSlider"><span id="paramName">—</span><output id="paramOut"></output></label>
+            <input id="paramSlider" type="range" min="0" max="1" step="0.1" value="0" />
+          </div>
+        </div>
+        <div class="control-bottom">
+          <div class="seg-row">
+            <div class="segmented" id="viewGroup" role="group" aria-label="Frequency range">
+              <button type="button" data-value="standard">As the DFT sees it: 0 … 2π</button>
+              <button type="button" data-value="centered">Centered −π … π</button>
+              <button type="button" data-value="wide">Two periods −2π … 2π</button>
+            </div>
+            <span class="seg-label">zero-pad to M =</span>
+            <div class="segmented" id="padGroup" role="group" aria-label="Zero padding">
+              <button type="button" data-value="1">N</button><button type="button" data-value="2">2N</button><button type="button" data-value="4">4N</button><button type="button" data-value="8">8N</button>
+            </div>
+          </div>
+          <div class="chips" id="chips">
+            <span class="lbl">show</span>
+            <button type="button" class="chip" data-toggle="samples">DFT samples on the DTFT</button>
+            <button type="button" class="chip" data-toggle="rulers">ω &amp; hertz rulers</button>
+            <button type="button" class="chip" data-toggle="phase">phase</button>
+            <button type="button" class="chip" data-toggle="winding">winding picture</button>
+          </div>
+        </div>
+        <div class="live-metrics" aria-live="polite">
+          <div class="metric" id="tsMetric">Tₛ = 1/fₛ <b>—</b></div>
+          <div class="metric" id="winMetric">window <b>—</b></div>
+          <div class="metric" id="dwMetric">bin spacing <b>—</b></div>
+        </div>
+      </section>
+
+      <article class="card plot-card">
+        <div class="card-head">
+          <div><h2><span class="step">time</span>The window, N samples (and the padded zeros)</h2><p id="timeCaption">x[n] = x(nTₛ) for n = 0 … N−1. Outside the window the signal is zero — nothing repeats. Hollow stems are appended zeros: they add no information, only more DFT points.</p></div>
+        </div>
+        <div class="plot-wrap"><canvas id="timeCanvas" aria-label="Aperiodic signal, its samples and padded zeros"></canvas><div class="tip" id="timeTip"></div></div>
+        <div class="legend">
+          <span><i class="key faint"></i> continuous x(t) on the window</span>
+          <span><i class="key"></i> samples x[n]</span>
+          <span><i class="key zero"></i> padded zeros, N ≤ n &lt; M</span>
+        </div>
+      </article>
+
+      <article class="card plot-card">
+        <div class="card-head">
+          <div><h2><span class="step">freq</span>|X(e<sup>jω</sup>)| — continuous in ω, periodic in 2π — and the DFT that samples it</h2><p id="specCaption"></p></div>
+        </div>
+        <div class="plot-wrap spec"><canvas id="specCanvas" aria-label="DTFT magnitude with DFT samples"></canvas><div class="tip" id="specTip"></div></div>
+        <div class="legend">
+          <span><i class="key curve"></i> DTFT of the N samples</span>
+          <span><i class="key"></i> bins 0 → M/2: positive, low → high</span>
+          <span><i class="key negative"></i> bins M/2 → M: negative, high → low</span>
+          <span><i class="key neutral"></i> k = 0 (dc) and k = M/2 (ω = π)</span>
+          <span id="ringKey" hidden><i class="ring"></i> the original N-point bins</span>
+        </div>
+        <div class="teaching-note" id="specNote"></div>
+      </article>
+
+      <article class="card plot-card" id="phaseCard" hidden>
+        <div class="card-head">
+          <div><h2><span class="step">∠X</span>Phase ∠X(e<sup>jω</sup>)</h2><p>Principal value in (−π, π]. Jumps of 2π are wrap-around; jumps of π happen where the magnitude crosses zero. A time shift shows up as a linear slope.</p></div>
+        </div>
+        <div class="plot-wrap phase"><canvas id="phaseCanvas" aria-label="DTFT phase"></canvas><div class="tip" id="phaseTip"></div></div>
+      </article>
+
+      <article class="card plot-card" id="windCard" hidden>
+        <div class="card-head">
+          <div><h2><span class="step">wind</span>Wind the samples around the origin</h2><p>Sample n is placed at radius x[n] and turned by −ω·n: consecutive points are rotated by the same angle ω — the digital frequency. The sum of the points is X(e<sup>jω</sup>); their centroid is X(e<sup>jω</sup>)/N. Nothing repeats, so every ω gives its own value.</p></div>
+        </div>
+        <div class="wind-controls">
+          <div class="field">
+            <label for="rateSlider"><span>Winding rate ω (radians per sample)</span><output id="rateOut">0.25π</output></label>
+            <input id="rateSlider" type="range" min="0" max="6.2832" step="0.01" value="0.7854" />
+          </div>
+          <div class="chips" id="windChips"><button type="button" class="chip on" data-toggle="wcurve">continuous curve</button></div>
+        </div>
+        <div class="plot-wrap wind"><canvas id="windCanvas" aria-label="Samples wound around the origin with their centroid"></canvas><div class="tip" id="windTip"></div></div>
+        <div class="legend">
+          <span><i class="key"></i> wound samples x[n]e<sup>−jωn</sup></span>
+          <span><i class="key curve"></i> the wound continuous window</span>
+          <span><i class="key angle"></i> turn per sample ω</span>
+          <span><i class="key centroid"></i> centroid = X(e<sup>jω</sup>)/N</span>
+        </div>
+        <div class="live-metrics" aria-live="polite">
+          <div class="metric" id="turnMetric">turn per sample <b>—</b></div>
+          <div class="metric" id="physMetric">physical rate <b>—</b></div>
+          <div class="metric" id="centroidMetric">centroid <b>—</b></div>
+        </div>
+        <div class="teaching-note">Click a DFT stem to wind at that bin. Slide past ω = π and the picture mirrors: a turn of more than half a circle per sample looks like a smaller turn the other way — which is why the right half of the spectrum holds the negative frequencies, and why the whole thing repeats at 2π. Picture after 3Blue1Brown, <i>But what is the Fourier Transform?</i></div>
+      </article>
+
+      <div class="mantra"><b>One curve, M samples of it.</b> Sampling in time made the spectrum 2π-periodic; the DFT reads that curve at ω = 2πk/M. Zero-padding reads it more finely but cannot add what the N samples never knew. Bin k sits at f = k·fₛ/M for k ≤ M/2 and at (k − M)·fₛ/M beyond — same numbers, new rulers.</div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const {TAU,PI,C,$,setupCanvas,line,text,dot,hollow,gridFrame,piFrac,fmtHz,fmtSec,fmtC,dft,dtft,binClass,binColor,tints,rulers,windingPlane,bindHover,bindPaint,presetTokens,bindChips,bindSegmented}=window.FL;
+  const G=256;
+  // Signals on the window u ∈ [0,1) (n = uN). Parameter specs drive the generic slider.
+  const SIG={
+    cosine:{param:{name:"Cycles in the window",min:0.5,max:12,step:0.5,val:4.5},fn:(u,c)=>1+Math.cos(TAU*c*u),
+      note:`<b>The 3Blue1Brown segment.</b> A finite piece of a shifted cosine: its DTFT has a lobe at the tone's digital frequency (c cycles in N samples → ω = 2πc/N) plus a dc lobe, each with the side lobes that come from cutting the signal off. Pad to see the lobes in full.`},
+    tone:{param:{name:"Cycles c in the window",min:0,max:16,step:0.1,val:3},fn:(u,c)=>Math.cos(TAU*c*u),
+      note:`<b>Windowed tone.</b> With an integer number of cycles the tone lands on a bin and the DTFT's zeros land on every other bin: one clean stem per side. Make c non-integer and the bins sample the skirts instead — leakage — which zero-padding reveals in full.`},
+    twoClose:{param:{name:"Cycles c of the first tone",min:0,max:16,step:0.1,val:3},fn:(u,c)=>Math.cos(TAU*c*u)+Math.cos(TAU*(c+0.7)*u),
+      note:`<b>Two close tones.</b> Their lobes overlap into one bump because only N samples were taken. Zero-padding draws the bump in more detail but never splits it; only more real samples (larger N) do.`},
+    rect:{param:{name:"Pulse length L (samples)",min:1,max:64,step:1,val:4},fn:(u,L,N)=>u*N<L?1:0,
+      note:`<b>Rectangular pulse.</b> |X| = |sin(ωL/2)/sin(ω/2)|: a main lobe of width 4π/L and side lobes. Try the two-period view — the whole pattern repeats every 2π because e<sup>−jωn</sup> cannot tell ω from ω + 2π.`},
+    expo:{param:{name:"Decay a",min:0.5,max:0.98,step:0.02,val:0.8},fn:(u,a,N)=>Math.pow(a,u*N),
+      note:`<b>Decaying exponential.</b> X ≈ 1/(1 − ae<sup>−jω</sup>): lowpass, largest at ω = 0 and again near 2π (the same frequency), smallest at ω = π. Bins 0 → N/2 walk up the positive side, bins N/2 → N walk back along the folded negative side.`},
+    twoSided:{param:{name:"Decay a",min:0.5,max:0.98,step:0.02,val:0.7},fn:(u,a,N)=>Math.pow(a,Math.abs(u*N-N/2)),
+      note:`<b>Two-sided decay.</b> Nearly even about the middle of the window, so the phase is close to linear (the centering shift) and the magnitude is the classic bell (1 − a²)/(1 − 2a cos ω + a²).`},
+    triangle:{param:null,fn:u=>1-Math.abs(2*u-1),
+      note:`<b>Triangle.</b> The square of the pulse spectrum, so the side lobes fall off faster. Compare the first side lobe with the rectangular pulse.`},
+    sinc:{param:{name:"Cutoff ω_c (× π)",min:0.1,max:0.9,step:0.05,val:0.4},fn:(u,wc,N)=>{const m=u*N-N/2;return Math.abs(m)<1e-9?wc:Math.sin(wc*PI*m)/(PI*m);},
+      note:`<b>Truncated ideal lowpass.</b> The infinite sinc has a brick-wall spectrum; cut to N samples it ripples near the edge (Gibbs). Increase N: the transition sharpens, the overshoot stays.`},
+    random:{param:null,fn:(u,_,N)=>{let s=12345+Math.floor(u*N);s=(s*1103515245+12345)%2147483648;return s/2147483648*2-1;},
+      note:`<b>Random samples.</b> No structure to speak of — but still a continuous curve that the bins sample, still symmetric about ω = π because the samples are real.`},
+    custom:{param:null,note:`<b>Your signal.</b> Drag on the time plot to reshape the window. Watch how a narrow feature spreads the spectrum out, and how a smooth one keeps it near dc.`},
+  };
+  const state={signal:"cosine",fs:8000,N:16,pad:1,view:"standard",samples:true,rulers:true,phase:false,winding:false,wcurve:true,wrate:PI/4,param:4.5,hoverK:null,hoverW:null,custom:new Float64Array(G),paintRange:null};
+  const M=()=>state.N*state.pad, Ts=()=>1/state.fs;
+  function xu(u){ if(u<0||u>=1)return 0; if(state.signal!=="custom"){const S=SIG[state.signal];return S.fn(u,state.param,state.N);} const f=u*G,i=Math.floor(f),t=f-i;return state.custom[i]*(1-t)+state.custom[Math.min(G-1,i+1)]*t; }
+  function samples(){const x=[];for(let n=0;n<state.N;n++)x.push(xu(n/state.N));return x;}
+  function range(){ if(state.paintRange)return state.paintRange; let lo=Infinity,hi=-Infinity;for(let i=0;i<=200;i++){const v=xu(i/200*(1-1e-9));lo=Math.min(lo,v);hi=Math.max(hi,v);} lo=Math.min(lo,0);hi=Math.max(hi,0);const pad=(hi-lo)*0.18||0.5;return {lo:lo-pad,hi:hi+pad}; }
+  const RANGES={standard:[0,TAU],centered:[-PI,PI],wide:[-TAU,TAU]};
+  const wrapW=w=>((w+PI)%TAU+TAU)%TAU-PI;
+
+  /* ---------------- time ---------------- */
+  let timeGeom=null;
+  function drawTime(){
+    const {ctx,w,h}=setupCanvas($("timeCanvas"));
+    const N=state.N,Mlen=M(),rg=range(),p={l:44,r:16,t:18,b:34};
+    const px=n=>p.l+(n+0.5)/Mlen*(w-p.l-p.r),py=v=>h-p.b-(v-rg.lo)/(rg.hi-rg.lo)*(h-p.t-p.b);
+    ctx.fillStyle=C.keep;ctx.fillRect(px(-0.5),p.t,px(N-0.5)-px(-0.5),h-p.t-p.b);
+    for(let i=0;i<=4;i++){const yy=p.t+i*(h-p.t-p.b)/4;line(ctx,p.l,yy,w-p.r,yy,C.grid,1);}
+    const y0=py(0);line(ctx,p.l,y0,w-p.r,y0,C.axis,1.2);
+    ctx.beginPath();const K=600;for(let i=0;i<=K;i++){const u=i/K*(1-1e-9);const xx=px(u*N-0.5),yy=py(xu(u));i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);}
+    ctx.strokeStyle=state.signal==="custom"?C.blue:C.blueSoft;ctx.lineWidth=state.signal==="custom"?2.2:1.8;ctx.stroke();
+    const r=Math.max(1.6,Math.min(3.4,160/Mlen)),x=samples();
+    for(let n=0;n<Mlen;n++){const xx=px(n);if(n<N){const yy=py(x[n]);line(ctx,xx,y0,xx,yy,C.blue,Mlen>64?1:1.5);dot(ctx,xx,yy,r,C.blue);}else hollow(ctx,xx,y0,r,C.zero,1.2);}
+    const yB=p.t+8;line(ctx,px(0),yB,px(N-1),yB,C.violet,1.3);text(ctx,`N = ${N} samples · window ${fmtSec(N*Ts())}`,(px(0)+px(N-1))/2,yB+9,"center",C.violet,"600 10.5px system-ui");
+    if(Mlen>N){line(ctx,px(N),yB,px(Mlen-1),yB,"#9aa3b2",1.3);text(ctx,`${Mlen-N} zeros`,(px(N)+px(Mlen-1))/2,yB+9,"center","#6b7280","600 10.5px system-ui");}
+    const every=Mlen>=64?16:Mlen>=32?8:4;for(let n=0;n<Mlen;n+=every)text(ctx,String(n),px(n),h-p.b+12);
+    text(ctx,"n",w-p.r+6,y0,"left",C.muted,"italic 12px Georgia");text(ctx,"x[n]",p.l-6,p.t+6,"right",C.muted,"italic 11px Georgia");
+    if(state.signal==="custom")text(ctx,"drag inside the window to draw",w-p.r-6,p.t+24,"right",C.violet,"600 10.5px system-ui");
+    timeGeom={px,py,rg,p,x,N,Mlen};
+  }
+
+  /* ---------------- spectrum + phase ---------------- */
+  let specGeom=null,phaseGeom=null;
+  function freqAxis(ctx,w,p,y0){
+    const [lo,hi]=RANGES[state.view],px=v=>p.l+(v-lo)/(hi-lo)*(w-p.l-p.r);
+    for(let m=Math.floor(lo/TAU)-1;m<=Math.ceil(hi/TAU);m++){
+      const a=Math.max(lo,m*TAU),b=Math.min(hi,m*TAU+PI),c=Math.max(lo,m*TAU+PI),d=Math.min(hi,(m+1)*TAU);
+      tints(ctx,px,p.t,y0,[[a,b,false],[c,d,true]]);
+    }
+    gridFrame(ctx,p,w,y0,p.t);
+    [-PI,PI].forEach(v=>{if(v>lo&&v<hi)line(ctx,px(v),p.t,px(v),y0,"#8d93a3",1,[5,4]);});
+    if(state.view==="wide")text(ctx,"principal interval −π … π",px(0),p.t+9,"center","#8d93a3","600 10.5px system-ui");
+    else text(ctx,state.view==="standard"?"positive: low → high │ negative: high → low":"negative: high → low │ positive: low → high",(p.l+w-p.r)/2,p.t+9,"center","#6b7280","600 10.5px system-ui");
+    return {px,lo,hi};
+  }
+  function drawSpec(){
+    const {ctx,w,h}=setupCanvas($("specCanvas"));
+    const N=state.N,Mlen=M(),x=samples(),wide=state.view==="wide",showStems=state.samples&&!wide,showRul=state.rulers&&showStems;
+    const p={l:48,r:20,t:28,b:showRul?96:44},y0=h-p.b,ax=freqAxis(ctx,w,p,y0);
+    const K=wide?1400:900,curve=[];let peak=0.01;
+    for(let i=0;i<=K;i++){const w_=ax.lo+(ax.hi-ax.lo)*i/K,m=dtft(x,w_).mag;curve.push([w_,m]);peak=Math.max(peak,m);}
+    const py=v=>y0-v/(peak*1.15)*(y0-p.t);
+    ctx.beginPath();curve.forEach(([w_,m],i)=>{const xx=ax.px(w_),yy=py(m);i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);});
+    ctx.strokeStyle=showStems?C.curve:C.blue;ctx.lineWidth=2.2;ctx.stroke();
+    const geom=[];
+    if(showStems){
+      const X=dft(x,Mlen);
+      for(let k=0;k<Mlen;k++){
+        let wk=TAU*k/Mlen;if(state.view==="centered"&&wk>=PI)wk-=TAU;
+        const cls=binClass(k,Mlen),col=binColor(cls),xx=ax.px(wk),yy=py(X.mag[k]);
+        line(ctx,xx,y0,xx,yy,col,Mlen>64?1:1.5);dot(ctx,xx,yy,Math.max(1.6,Math.min(3.4,130/Mlen)),col);
+        if(state.pad>1&&k%state.pad===0)hollow(ctx,xx,yy,Math.max(4,Math.min(6,220/Mlen)),C.orange,1.6);
+        if(state.hoverK===k){ctx.strokeStyle=C.ink;ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(xx,yy,7,0,TAU);ctx.stroke();}
+        if(state.winding&&Math.abs(wrapW(state.wrate-wk))<1e-6){ctx.strokeStyle=C.orange;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(xx,yy,6,0,TAU);ctx.stroke();}
+        geom.push({k,kk:k>Mlen/2?k-Mlen:k,wk,x:xx,y:yy,mag:X.mag[k],cls});
+      }
+    }
+    if(showRul){
+      const every=Mlen>=64?Mlen/8:Mlen>=24?4:Mlen>=12?2:1;
+      const pick=geom.filter(g=>(state.view==="standard"?g.k:g.kk+Mlen/2)%every===0||g.k===Mlen/2);
+      rulers(ctx,p,w,y0,[
+        {name:"k",items:pick.map(g=>({x:g.x,label:String(state.view==="centered"?g.kk:g.k).replace("-","−"),color:C.ink}))},
+        {name:"ω",items:pick.map(g=>({x:g.x,label:piFrac(TAU*g.kk/Mlen),color:binColor(g.cls)}))},
+        {name:"f",items:pick.map(g=>({x:g.x,label:fmtHz(g.kk*state.fs/Mlen),color:binColor(g.cls)}))},
+      ]);
+    } else {
+      const step=PI/2;for(let v=Math.ceil(ax.lo/step)*step;v<=ax.hi+1e-9;v+=step){line(ctx,ax.px(v),y0-3,ax.px(v),y0+3,C.axis);text(ctx,piFrac(v),ax.px(v),y0+13);}
+    }
+    if(state.hoverW!==null&&(wide||!showStems)){const m=dtft(x,state.hoverW).mag,xx=ax.px(state.hoverW);line(ctx,xx,p.t,xx,y0,C.orange,1,[4,3]);dot(ctx,xx,py(m),4,C.orange,true);}
+    text(ctx,"ω",w-p.r+6,y0,"left",C.muted,"italic 12px Georgia");text(ctx,"|X(eʲʷ)|",p.l-6,p.t+6,"right",C.muted,"italic 11px Georgia");
+    specGeom={geom,ax,py,p,showStems,x};
+  }
+  function drawPhase(){
+    if(!state.phase)return;
+    const {ctx,w,h}=setupCanvas($("phaseCanvas"));
+    const x=samples(),p={l:48,r:20,t:18,b:34},y0=h-p.b,ax=freqAxis(ctx,w,p,y0);
+    const mid=(p.t+y0)/2,py=v=>mid-v/PI*(y0-p.t)/2*0.92;line(ctx,p.l,mid,w-p.r,mid,C.axis,1);
+    [[PI,"π"],[0,"0"],[-PI,"−π"]].forEach(([v,l])=>text(ctx,l,p.l-8,py(v),"right",C.muted,"10.5px system-ui"));
+    const K=state.view==="wide"?1400:900;let pen=false,prev=0,peak=0.01;const pts=[];
+    for(let i=0;i<=K;i++){const w_=ax.lo+(ax.hi-ax.lo)*i/K,X=dtft(x,w_);pts.push([w_,X]);peak=Math.max(peak,X.mag);}
+    ctx.beginPath();
+    pts.forEach(([w_,X])=>{ if(X.mag<1e-4*peak){pen=false;return;} const ph=Math.atan2(X.im,X.re),xx=ax.px(w_),yy=py(ph); if(pen&&Math.abs(ph-prev)>PI*0.9)pen=false; pen?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);pen=true;prev=ph; });
+    ctx.strokeStyle=C.blue;ctx.lineWidth=1.8;ctx.stroke();
+    const step=PI/2;for(let v=Math.ceil(ax.lo/step)*step;v<=ax.hi+1e-9;v+=step){line(ctx,ax.px(v),y0-3,ax.px(v),y0+3,C.axis);text(ctx,piFrac(v),ax.px(v),y0+13);}
+    text(ctx,"∠X",p.l-6,p.t+6,"right",C.muted,"italic 11px Georgia");
+    phaseGeom={ax,py,p};
+  }
+
+  /* ---------------- winding ---------------- */
+  let windGeom=null;
+  function drawWind(){
+    if(!state.winding)return;
+    const {ctx,w,h}=setupCanvas($("windCanvas"));
+    const N=state.N,wr=state.wrate,x=samples();
+    let R=0.5;for(let i=0;i<=200;i++)R=Math.max(R,Math.abs(xu(i/200*(1-1e-9))));R*=1.12;
+    const path=[];if(state.wcurve){for(let i=0;i<=700;i++){const u=i/700*(1-1e-9),v=xu(u),th=-wr*u*N;path.push({re:v*Math.cos(th),im:v*Math.sin(th)});}}
+    const pts=[];let cre=0,cim=0;for(let n=0;n<N;n++){const th=-wr*n,re=x[n]*Math.cos(th),im=x[n]*Math.sin(th);pts.push({re,im,n});cre+=re;cim+=im;}
+    const centroid={re:cre/N,im:cim/N};
+    windGeom=windingPlane(ctx,w,h,{R,path:state.wcurve?path:null,pts,centroid,arc:wr>0?wr%TAU:null,arcLabel:"ω = "+piFrac(wr),centroidLabel:"centroid"});
+    const Mlen=M(),kf=wr/TAU*Mlen,onBin=Math.abs(kf-Math.round(kf))<1e-6;
+    $("turnMetric").innerHTML=`turn per sample <b>ω = ${piFrac(wr)}</b>${onBin?` &nbsp;= 2π·${Math.round(kf)}/${Mlen}: bin k = ${Math.round(kf)}`:""}`;
+    $("physMetric").innerHTML=`physical rate <b>Ω = ω·fₛ = ${(wr*state.fs/1000).toFixed(2)} krad/s, &nbsp;f = ${fmtHz(wr*state.fs/TAU)}</b>`;
+    $("centroidMetric").innerHTML=`centroid <b>${fmtC(centroid.re,centroid.im)}</b> &nbsp;→&nbsp; X(e<sup>jω</sup>) = N·centroid = <b>${fmtC(N*centroid.re,N*centroid.im,2)}</b>, |X| = ${(N*Math.hypot(centroid.re,centroid.im)).toFixed(2)}`;
+  }
+
+  /* ---------------- readouts ---------------- */
+  function configureParam(){
+    const S=SIG[state.signal],f=$("paramField");
+    if(!S.param){f.classList.add("off");return;} f.classList.remove("off");
+    const sl=$("paramSlider");sl.min=S.param.min;sl.max=S.param.name.includes("length")?state.N:S.param.max;sl.step=S.param.step;sl.value=state.param;$("paramName").textContent=S.param.name;
+  }
+  function updateReadouts(){
+    const N=state.N,Mlen=M(),S=SIG[state.signal];
+    $("nOut").textContent=String(N);
+    if(S.param)$("paramOut").textContent=S.param.name.includes("× π")?piFrac(state.param*PI):(Number.isInteger(S.param.step)?String(state.param):state.param.toFixed(state.param%1?2:0).replace(/\.?0+$/,""));
+    $("tsMetric").innerHTML=`Tₛ = 1/fₛ <b>${fmtSec(Ts())}</b>`;
+    $("winMetric").innerHTML=`window <b>N·Tₛ = ${fmtSec(N*Ts())}</b> &nbsp;·&nbsp; DFT length <b>M = ${Mlen}</b>`;
+    $("dwMetric").innerHTML=`bin spacing <b>Δω = 2π/M = ${piFrac(TAU/Mlen)}, &nbsp;Δf = fₛ/M = ${fmtHz(state.fs/Mlen)}</b>`;
+    $("ringKey").hidden=!(state.pad>1&&state.samples&&state.view!=="wide");
+    $("phaseCard").hidden=!state.phase;$("windCard").hidden=!state.winding;
+    $("timeCanvas").classList.toggle("draw",state.signal==="custom");
+    $("specCaption").innerHTML=state.view==="wide"?"Two full periods of the DTFT. The dashed lines mark the principal interval: everything outside it is a repeat, because e<sup>−jωn</sup> cannot tell ω from ω + 2π when n is an integer.":state.samples?(state.pad===1?"The gray curve is the DTFT of the N samples; the stems are the N-point DFT, sitting on it at ω = 2πk/N. Hover a stem for its digital frequency and its frequency in hertz; click it to wind at that rate.":`Zero-padded to M = ${Mlen}: the stems sample the <em>same</em> curve every 2π/M. Orange rings mark the bins the plain N-point DFT already had.`):"The DTFT alone — a continuous function of ω. Switch the DFT samples back on to see which of its values a computer actually gets.";
+    $("specNote").innerHTML=S.note;
+    $("rateOut").textContent=piFrac(state.wrate);$("rateSlider").value=state.wrate;
+  }
+  function drawAll(){updateReadouts();drawTime();drawSpec();drawPhase();drawWind();}
+
+  /* ---------------- interaction ---------------- */
+  bindHover($("timeCanvas"),$("timeTip"),(mx)=>{
+    if(!timeGeom||state.paintRange)return null;const g=timeGeom,rect=$("timeCanvas").getBoundingClientRect();
+    const n=Math.floor((mx-g.p.l)/(rect.width-g.p.l-g.p.r)*g.Mlen);if(n<0||n>=g.Mlen)return null;
+    const v=n<g.N?g.x[n]:0;return {html:n<g.N?`n = ${n} &nbsp;·&nbsp; t = nTₛ = ${fmtSec(n*Ts())}<br>x[n] = ${v.toFixed(3)}`:`n = ${n} &nbsp;·&nbsp; padded zero`,x:g.px(n),y:g.py(v)};
+  });
+  bindPaint($("timeCanvas"),{
+    enabled:()=>state.signal==="custom",
+    toIndex:(mx,rect)=>{if(!timeGeom)return null;const g=timeGeom,u=((mx-g.p.l)/(rect.width-g.p.l-g.p.r)*g.Mlen)/g.N;if(u<0||u>=1)return null;return Math.floor(u*G);},
+    toValue:(my,rect)=>{const g=timeGeom;if(!state.paintRange)state.paintRange=g.rg;const rg=state.paintRange,p=g.p;const v=rg.lo+(rect.height-p.b-my)/(rect.height-p.t-p.b)*(rg.hi-rg.lo);return Math.max(rg.lo,Math.min(rg.hi,v));},
+    paint:(i0,i1,v0,v1)=>{const a=Math.min(i0,i1),b=Math.max(i0,i1);for(let i=a;i<=b;i++){const t=b===a?0:(i-a)/(b-a);state.custom[i]=i0<=i1?v0+(v1-v0)*t:v1+(v0-v1)*t;}drawAll();},
+    done:()=>{state.paintRange=null;drawAll();},
+  });
+  bindHover($("specCanvas"),$("specTip"),(mx,my,rect)=>{
+    if(!specGeom)return null;const g=specGeom,Mlen=M(),N=state.N;
+    if(g.showStems){
+      let best=null,bd=12;for(const q of g.geom){const d=Math.abs(q.x-mx);if(d<bd){bd=d;best=q;}}
+      state.hoverK=best?best.k:null;drawSpec();if(!best)return null;
+      const kind=best.cls==="dc"?"dc":best.cls==="nyq"?"ω = π, the highest frequency":best.cls==="pos"?"positive frequency":`negative frequency (k − M = ${best.kk})`;
+      const orig=state.pad>1?(best.k%state.pad===0?`<br>also bin ${best.k/state.pad} of the plain ${N}-point DFT`:`<br>a new sample — not in the ${N}-point DFT`):"";
+      return {html:`<b>k = ${best.k}</b> of M = ${Mlen} · ${kind}<br>|X[k]| = ${best.mag.toFixed(3)} = |X(e<sup>jω</sup>)| at ω<sub>k</sub><br>ω<sub>k</sub> = 2π·${best.kk}/${Mlen} = ${piFrac(TAU*best.kk/Mlen)} rad/sample<br>f = ${best.kk}·fₛ/M = ${fmtHz(best.kk*state.fs/Mlen)}${orig}`,x:best.x,y:best.y,pad:135,minY:64};
+    }
+    const frac=(mx-g.p.l)/(rect.width-g.p.l-g.p.r);if(frac<0||frac>1){state.hoverW=null;drawSpec();return null;}
+    const w_=g.ax.lo+(g.ax.hi-g.ax.lo)*frac;state.hoverW=w_;drawSpec();const X=dtft(g.x,w_),u=wrapW(w_);
+    return {html:`ω = ${piFrac(w_)} rad/sample${Math.abs(u-w_)>1e-6?` &nbsp;(same as ${piFrac(u)})`:""}<br>|X| = ${X.mag.toFixed(3)} &nbsp;·&nbsp; f = ${fmtHz(u*state.fs/TAU)}`,x:g.ax.px(w_),y:g.py(X.mag),pad:120};
+  },()=>{state.hoverK=null;state.hoverW=null;drawSpec();});
+  $("specCanvas").addEventListener("click",()=>{ if(state.hoverK===null||!specGeom)return;const g=specGeom.geom.find(q=>q.k===state.hoverK);if(!g)return;state.wrate=(TAU*g.k/M())%TAU;if(!state.winding){state.winding=true;syncChips();}drawAll();$("windCard").scrollIntoView({behavior:"smooth",block:"nearest"});});
+  bindHover($("phaseCanvas"),$("phaseTip"),(mx,my,rect)=>{
+    if(!phaseGeom)return null;const g=phaseGeom,frac=(mx-g.p.l)/(rect.width-g.p.l-g.p.r);if(frac<0||frac>1)return null;
+    const w_=g.ax.lo+(g.ax.hi-g.ax.lo)*frac,X=dtft(samples(),w_),ph=Math.atan2(X.im,X.re);
+    return {html:`ω = ${piFrac(w_)}<br>∠X = ${(ph*180/PI).toFixed(0)}°`,x:g.ax.px(w_),y:g.py(ph)};
+  });
+  bindHover($("windCanvas"),$("windTip"),(mx,my)=>{
+    if(!windGeom)return null;let best=null,bd=14;for(const q of windGeom.geom){const d=Math.hypot(q.x-mx,q.y-my);if(d<bd){bd=d;best=q;}}
+    if(!best)return null;return {html:`n = ${best.n} &nbsp;·&nbsp; x[n] = ${samples()[best.n].toFixed(3)}<br>turned by ω·n = ${piFrac(state.wrate*best.n)} (${(state.wrate*best.n/TAU).toFixed(2)} turns)`,x:best.x,y:best.y-4};
+  });
+  const syncChips=bindChips($("chips"),state,()=>drawAll());
+  bindChips($("windChips"),state,()=>drawWind());
+  const syncView=bindSegmented($("viewGroup"),()=>state.view,v=>{state.view=v;drawAll();});
+  const syncPad=bindSegmented($("padGroup"),()=>state.pad,v=>{state.pad=Number(v);drawAll();});
+  $("signalSelect").addEventListener("change",e=>selectSignal(e.target.value));
+  $("fsSelect").addEventListener("change",e=>{state.fs=Number(e.target.value);drawAll();});
+  $("nSlider").addEventListener("input",e=>{state.N=Number(e.target.value);const S=SIG[state.signal];if(S.param&&S.param.name.includes("length")){$("paramSlider").max=state.N;state.param=Math.min(state.param,state.N);}drawAll();});
+  $("paramSlider").addEventListener("input",e=>{state.param=Number(e.target.value);drawAll();});
+  $("rateSlider").addEventListener("input",e=>{state.wrate=Number(e.target.value);drawAll();});
+  function selectSignal(name){
+    if(name==="custom"&&state.signal!=="custom"){for(let i=0;i<G;i++)state.custom[i]=xu(i/G);}
+    state.signal=name;const S=SIG[name];if(S.param){state.param=S.param.val;if(S.param.name.includes("length"))state.param=Math.min(S.param.val,state.N);}
+    $("signalSelect").value=name;configureParam();drawAll();
+  }
+  let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(drawAll,80);});
+
+  // deep links: ?preset=cosine-winding-N36-w0.25-pad8-wide-centered-phase-nosamples-fs8000-c4.5
+  for(const tok of presetTokens()){
+    if(SIG[tok])state.signal=tok;
+    else if(tok==="winding")state.winding=true; else if(tok==="phase")state.phase=true; else if(tok==="nosamples")state.samples=false; else if(tok==="norulers")state.rulers=false;
+    else if(tok==="wide"||tok==="centered"||tok==="standard")state.view=tok;
+    else if(/^N\d+$/.test(tok))state.N=Math.max(4,Math.min(64,Number(tok.slice(1))));
+    else if(/^pad[1248]$/.test(tok))state.pad=Number(tok.slice(3));
+    else if(/^w[\d.]+$/.test(tok))state.wrate=Number(tok.slice(1))*PI;
+    else if(/^fs\d+$/.test(tok)){const v=Number(tok.slice(2));if([...$("fsSelect").options].some(o=>Number(o.value)===v))state.fs=v;}
+    else if(/^c[\d.]+$/.test(tok))state.param=Number(tok.slice(1));
+  }
+  const S0=SIG[state.signal];if(S0.param&&!presetTokens().some(t=>/^c[\d.]+$/.test(t)))state.param=S0.param.name.includes("length")?Math.min(S0.param.val,state.N):S0.param.val;
+  if(state.signal==="custom"){for(let i=0;i<G;i++)state.custom[i]=SIG.cosine.fn(i/G,4.5,state.N);}
+  $("signalSelect").value=state.signal;$("fsSelect").value=String(state.fs);$("nSlider").value=state.N;
+  configureParam();syncChips();syncView();syncPad();
+  drawAll();
+})();
+</script>
+</body>
+</html>

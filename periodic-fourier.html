@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Periodic Signals: Fourier Series → DFS → DFT · CSE 219</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="assets/site.css" />
+<script src="assets/site.js" defer></script>
+<script src="assets/fourier-lab.js"></script>
+<style>
+  :root{--violet:#4f46e5;--violet-dark:#3730a3;--violet-soft:#eef2ff;--blue:#2563eb;--cyan:#0891b2;--orange:#ea580c;--plot:#fbfcff;--radius:16px}
+  .content{overflow-x:hidden}
+  [hidden]{display:none!important}
+  .lab{width:100%;max-width:1240px;margin:0 auto;padding:30px 22px 80px}
+  .lab-header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px}
+  .eyebrow{color:var(--violet);font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+  .lab-header h1{font-size:30px;line-height:1.15;letter-spacing:-.03em;margin:0}
+  .lab-header p{color:var(--muted);font-size:14.5px;max-width:760px;margin:8px 0 0}
+  .limit-pill{flex:none;background:linear-gradient(135deg,#eef2ff,#f5f3ff);color:var(--violet-dark);border:1px solid #dcdcff;border-radius:14px;padding:12px 16px;font-size:14px;font-weight:800;white-space:nowrap}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:18px;min-width:0}
+  .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:14px}
+  .card-head h2{font-size:16px;letter-spacing:-.01em;margin:0}
+  .card-head p{font-size:12.8px;color:var(--muted);margin:4px 0 0;max-width:720px}
+  .step{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:25px;padding:0 8px;border-radius:999px;background:var(--violet-soft);color:var(--violet);font-size:11px;font-weight:900;margin-right:7px;vertical-align:2px}
+  .controls{display:grid;grid-template-columns:1.4fr .8fr 1fr;gap:16px;align-items:end}
+  .field{min-width:0}
+  .field label{display:flex;justify-content:space-between;gap:8px;color:#4b5563;font-size:12px;font-weight:800;margin-bottom:7px}
+  .field output{color:var(--violet);font-variant-numeric:tabular-nums}
+  select{width:100%;border:1px solid #d9dce6;border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:13px;font-weight:650;padding:9px 11px;outline:none}
+  select:focus{border-color:#a5b4fc;box-shadow:0 0 0 3px #eef2ff}
+  input[type=range]{width:100%;height:5px;margin:8px 0;accent-color:var(--violet)}
+  .control-bottom{display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid var(--line);margin-top:18px;padding-top:16px;flex-wrap:wrap}
+  .seg-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .segmented{display:inline-flex;background:#f3f4f8;border:1px solid var(--line);padding:3px;border-radius:11px;gap:2px}
+  .segmented button{border:0;background:transparent;color:#5b6472;font:inherit;font-size:12.5px;font-weight:800;padding:7px 11px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .segmented button.active{background:#fff;color:var(--violet);box-shadow:0 1px 4px rgba(16,24,40,.12)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .chips .lbl{font-size:11.5px;font-weight:800;color:#6b7280;letter-spacing:.04em;text-transform:uppercase;margin-right:2px}
+  .chip{border:1px solid #d9dce6;background:#fff;color:#5b6472;border-radius:999px;padding:6px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+  .chip::before{content:"○";margin-right:6px;color:#b0b6c4}
+  .chip.on{background:var(--violet-soft);border-color:#c7cbff;color:var(--violet-dark)}
+  .chip.on::before{content:"●";color:var(--violet)}
+  .live-metrics{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .metric{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:7px 10px;color:var(--muted);font-size:11.5px}
+  .metric b{color:var(--ink);font-size:12.5px;font-variant-numeric:tabular-nums;margin-left:5px}
+  .metric.warn{border-color:#fdba74;background:#fff7ed;color:#9a3412}
+  .plot-card{margin:0 0 18px}
+  .plot-wrap{height:280px;background:var(--plot);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative}
+  .plot-wrap.spec{height:400px}.plot-wrap.wind{height:360px}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  #specCanvas{cursor:pointer}#timeCanvas.draw{cursor:crosshair}
+  .tip{position:absolute;pointer-events:none;background:#1c2333;color:#fff;font-size:11.5px;line-height:1.55;padding:8px 10px;border-radius:8px;transform:translate(-50%,-112%);white-space:nowrap;opacity:0;transition:opacity .08s}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:11px;color:#596273;font-size:11.8px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .key{width:17px;height:3px;border-radius:2px;background:var(--blue);display:inline-block}
+  .key.faint{background:#bcc5ec}.key.negative{background:var(--cyan)}.key.neutral{background:#1c2333}.key.comb{background:#9aa3b2}.key.curve{background:#b4bac8}.key.centroid{background:var(--orange)}.key.angle{background:var(--violet)}
+  .diamond{width:9px;height:9px;border:2px solid var(--orange);transform:rotate(45deg);display:inline-block}
+  .teaching-note{background:#f8fafc;border-left:3px solid var(--violet);border-radius:0 9px 9px 0;color:#566072;font-size:12.8px;line-height:1.55;margin-top:12px;padding:9px 12px}
+  .teaching-note b{color:#303849}
+  .wind-controls{display:grid;grid-template-columns:1.4fr auto auto;gap:14px;align-items:end;margin-bottom:12px}
+  .btn{border:1px solid #d9dce6;background:#fff;color:#374151;border-radius:10px;padding:8px 13px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+  .btn:hover{background:#fafbff;border-color:#c7cad7}
+  .mantra{background:linear-gradient(135deg,#eef2ff,#f0fdfa);border:1px solid #dcdcff;border-radius:12px;padding:12px 16px;margin-top:4px;font-size:13px;color:#3d4457;line-height:1.6}
+  .mantra b{color:var(--violet-dark)}
+  @media(max-width:1080px){.controls{grid-template-columns:1fr 1fr}.plot-wrap{height:250px}.plot-wrap.spec{height:360px}.plot-wrap.wind{height:320px}.wind-controls{grid-template-columns:1fr}}
+  @media(max-width:680px){.lab{padding:22px 14px 60px}.lab-header{display:block}.limit-pill{display:inline-block;margin-top:13px;white-space:normal}.lab-header h1{font-size:25px}.card{padding:17px 15px}.controls{grid-template-columns:1fr}.control-bottom{align-items:stretch;flex-direction:column}.plot-wrap{height:220px}.plot-wrap.spec{height:330px}.card-head{display:block}}
+</style>
+</head>
+<body>
+<div class="site">
+  <aside class="sidebar" id="siteSidebar"></aside>
+  <main class="content">
+    <div class="lab">
+      <header class="lab-header">
+        <div>
+          <div class="eyebrow">DTFT &amp; DFT · lecture 1 · periodic signals</div>
+          <h1>Periodic Signals: Fourier Series → DFS → DFT</h1>
+          <p>One period of a signal, N samples of it, and the N numbers that describe both. Pick or draw a period, choose how densely to sample it, and read the result as Fourier-series coefficients, as the N-periodic DFS, as the DFT, and in hertz. The winding picture and the full periodic spectrum are there when you want them — toggle them on.</p>
+        </div>
+        <div class="limit-pill">X[k] = N·a<sub>k</sub>, &nbsp;k = 0 … N−1</div>
+      </header>
+
+      <section class="card" aria-labelledby="controlsTitle">
+        <div class="card-head">
+          <div><h2 id="controlsTitle">Signal and sampling</h2><p>Choose a periodic signal (or draw one), give it a real period T₀, and take N samples per period — the sampling rate follows as f<sub>s</sub> = N·f₀.</p></div>
+        </div>
+        <div class="controls">
+          <div class="field">
+            <label for="signalSelect"><span>Periodic signal x(t)</span></label>
+            <select id="signalSelect">
+              <option value="twoHarm">Two harmonics 1 + 0.8cos ω₀t + 0.5cos 2ω₀t (lecture)</option>
+              <option value="threeTone">Three harmonics (the lecture waveform)</option>
+              <option value="shiftedCos">Shifted cosine 1 + cos ω₀t (3Blue1Brown)</option>
+              <option value="tone">Single harmonic cos ω₀t</option>
+              <option value="square">Square wave</option>
+              <option value="triangle">Triangle wave</option>
+              <option value="sawtooth">Sawtooth</option>
+              <option value="pulse">Pulse train (20% duty)</option>
+              <option value="ramp">Staircase 1, 2, 3, 4 (the worked example)</option>
+              <option value="custom">Custom — draw one period</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="t0Select"><span>Period T₀</span></label>
+            <select id="t0Select">
+              <option value="0.001">1 ms</option><option value="0.002">2 ms</option><option value="0.005">5 ms</option>
+              <option value="0.01" selected>10 ms</option><option value="0.02">20 ms</option><option value="0.05">50 ms</option>
+              <option value="0.1">100 ms</option><option value="1">1 s</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="nSlider"><span>Samples per period N</span><output id="nOut">16</output></label>
+            <input id="nSlider" type="range" min="4" max="64" step="1" value="16" />
+          </div>
+        </div>
+        <div class="control-bottom">
+          <div class="seg-row">
+            <div class="segmented" id="viewGroup" role="group" aria-label="Spectrum view">
+              <button type="button" data-value="standard">DFT: the N bins 0 … N−1</button>
+              <button type="button" data-value="centered">Centered −N/2 … N/2</button>
+              <button type="button" data-value="full">Full DFS: every k</button>
+            </div>
+          </div>
+          <div class="chips" id="chips">
+            <span class="lbl">show</span>
+            <button type="button" class="chip" data-toggle="rulers">ω &amp; hertz rulers</button>
+            <button type="button" class="chip" data-toggle="ctfs">true Fourier series cₖ</button>
+            <button type="button" class="chip" data-toggle="winding">winding picture</button>
+          </div>
+        </div>
+        <div class="live-metrics" aria-live="polite">
+          <div class="metric" id="f0Metric">f₀ = 1/T₀ <b>—</b></div>
+          <div class="metric" id="fsMetric">sampling <b>—</b></div>
+          <div class="metric" id="dfMetric">bin spacing <b>Δf = f₀</b></div>
+          <div class="metric warn" id="aliasWarn" hidden>the true harmonics reach past N/2 — copies overlap (aliasing, see the Sampling lecture)</div>
+        </div>
+      </section>
+
+      <article class="card plot-card">
+        <div class="card-head">
+          <div><h2><span class="step">time</span>One period, N samples</h2><p id="timeCaption">x(t) with its impulse-train samples x[n] = x(nTₛ). One period T₀ holds exactly N of them; the faint copies remind you the signal goes on forever.</p></div>
+        </div>
+        <div class="plot-wrap"><canvas id="timeCanvas" aria-label="Periodic signal and its samples"></canvas><div class="tip" id="timeTip"></div></div>
+        <div class="legend">
+          <span><i class="key faint"></i> continuous x(t)</span>
+          <span><i class="key comb"></i> impulse train, spacing Tₛ</span>
+          <span><i class="key"></i> samples x[n]</span>
+        </div>
+      </article>
+
+      <article class="card plot-card">
+        <div class="card-head">
+          <div><h2><span class="step">freq</span>The spectrum of the samples</h2><p id="specCaption"></p></div>
+        </div>
+        <div class="plot-wrap spec"><canvas id="specCanvas" aria-label="DFS / DFT magnitude spectrum"></canvas><div class="tip" id="specTip"></div></div>
+        <div class="legend">
+          <span><i class="key"></i> bins 0 → N/2: positive, low → high</span>
+          <span><i class="key negative"></i> bins N/2 → N: negative, high → low</span>
+          <span><i class="key neutral"></i> k = 0 (dc) and k = N/2</span>
+          <span id="copiesKey" hidden><i class="key faint"></i> the same N values, repeating</span>
+          <span id="ctfsKey" hidden><i class="diamond"></i> true Fourier-series |cₖ| of x(t)</span>
+        </div>
+        <div class="teaching-note" id="specNote"></div>
+      </article>
+
+      <article class="card plot-card" id="windCard" hidden>
+        <div class="card-head">
+          <div><h2><span class="step">wind</span>Wind one period around the origin</h2><p>Each sample x[n] is placed at radius x[n] and turned by −2πk·n/N; the center of mass of the N points is a<sub>k</sub>. At an integer k the winding closes after one period and the points sit on the wound continuous curve.</p></div>
+        </div>
+        <div class="wind-controls">
+          <div class="field">
+            <label for="rateSlider"><span>Winding rate k (turns per period)</span><output id="rateOut">1</output></label>
+            <input id="rateSlider" type="range" min="0" max="16" step="0.05" value="1" />
+          </div>
+          <div class="seg-row"><button class="btn" id="rateDown" type="button">◀ bin</button><button class="btn" id="rateUp" type="button">bin ▶</button></div>
+          <div class="chips" id="windChips"><button type="button" class="chip on" data-toggle="wcurve">continuous curve</button></div>
+        </div>
+        <div class="plot-wrap wind"><canvas id="windCanvas" aria-label="Samples wound around the origin with their centroid"></canvas><div class="tip" id="windTip"></div></div>
+        <div class="legend">
+          <span><i class="key"></i> wound samples x[n]e<sup>−j2πkn/N</sup></span>
+          <span><i class="key curve"></i> the wound continuous period</span>
+          <span><i class="key angle"></i> turn per sample 2πk/N</span>
+          <span><i class="key centroid"></i> centroid = a<sub>k</sub></span>
+        </div>
+        <div class="live-metrics" aria-live="polite">
+          <div class="metric" id="turnMetric">turn per sample <b>—</b></div>
+          <div class="metric" id="centroidMetric">centroid <b>—</b></div>
+        </div>
+        <div class="teaching-note">Click any bin in the spectrum to wind at that k. Drag the slider between bins: the loop no longer closes, the mass spreads out, and the centroid drifts — a periodic signal has nothing at those rates. Picture after 3Blue1Brown, <i>But what is the Fourier Transform?</i></div>
+      </article>
+
+      <div class="mantra"><b>Only N numbers.</b> Sampling one period made the spectrum N-periodic; the DFT is the one period of it we keep, X[k] = N·a<sub>k</sub>. Bins 0 → N/2 climb from dc to the highest frequency, bins N/2 → N hold the folded negative frequencies — and bin k is simply the harmonic at k·f₀.</div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const {TAU,PI,C,$,setupCanvas,line,text,dot,diamond,gridFrame,piFrac,fmtHz,fmtSec,fmtC,dft,binClass,binColor,tints,rulers,windingPlane,bindHover,bindPaint,presetTokens,bindChips,bindSegmented}=window.FL;
+  const G=256;
+  const SIG={
+    twoHarm:{parts:[{h:0,a:1},{h:1,a:0.8},{h:2,a:0.5}]},
+    threeTone:{parts:[{h:1,a:1.2,p:-PI/2},{h:2,a:0.5,p:0},{h:4,a:0.3,p:-PI/2}]},
+    shiftedCos:{parts:[{h:0,a:1},{h:1,a:1}]},
+    tone:{parts:[{h:1,a:1}]},
+    square:{fn:u=>u<0.5?1:-1},
+    triangle:{fn:u=>1-4*Math.abs(u-0.5)},
+    sawtooth:{fn:u=>2*u-1},
+    pulse:{fn:u=>u<0.2?1:0},
+    ramp:{fn:u=>1+Math.floor(u*4)},
+    custom:{},
+  };
+  const state={signal:"twoHarm",T0:0.01,N:16,view:"standard",rulers:true,ctfs:false,winding:false,wcurve:true,wrate:1,hoverK:null,custom:new Float64Array(G),customVersion:0,paintRange:null};
+  const wrap=u=>((u%1)+1)%1;
+  function presetValue(name,u){const S=SIG[name];if(S.parts){let s=0;for(const q of S.parts)s+=q.a*Math.cos(TAU*q.h*u+(q.p||0));return s;}return S.fn(wrap(u));}
+  function xu(u){ if(state.signal!=="custom")return presetValue(state.signal,u); const f=wrap(u)*G,i=Math.floor(f),t=f-i; return state.custom[i]*(1-t)+state.custom[(i+1)%G]*t; }
+  function samples(){const x=[];for(let n=0;n<state.N;n++)x.push(xu(n/state.N));return x;}
+  function dfs(){const N=state.N,X=dft(samples(),N);return {re:X.re.map(v=>v/N),im:X.im.map(v=>v/N),mag:X.mag.map(v=>v/N)};}
+  let ctfsCache={key:"",vals:new Map()};
+  function ctfs(k){
+    const key=state.signal==="custom"?"custom"+state.customVersion:state.signal;
+    if(ctfsCache.key!==key)ctfsCache={key,vals:new Map()};
+    if(ctfsCache.vals.has(k))return ctfsCache.vals.get(k);
+    let re=0,im=0;const M=1024;for(let i=0;i<M;i++){const u=(i+0.5)/M,v=xu(u),th=-TAU*k*u;re+=v*Math.cos(th);im+=v*Math.sin(th);}
+    const m=Math.hypot(re,im)/M;ctfsCache.vals.set(k,m);return m;
+  }
+  function range(){ if(state.paintRange)return state.paintRange; let lo=Infinity,hi=-Infinity;for(let i=0;i<=200;i++){const v=xu(i/200);lo=Math.min(lo,v);hi=Math.max(hi,v);} lo=Math.min(lo,0);hi=Math.max(hi,0);const pad=(hi-lo)*0.18||0.5;return {lo:lo-pad,hi:hi+pad}; }
+  const f0=()=>1/state.T0, fs=()=>state.N/state.T0, Ts=()=>state.T0/state.N;
+  function highestHarmonic(){ // where the true series still carries energy — for the aliasing warning
+    if(state.signal!=="custom"&&SIG[state.signal].parts)return Math.max(...SIG[state.signal].parts.map(q=>q.h));
+    const c0=Math.max(ctfs(0),1e-9);let h=0;for(let k=1;k<=state.N;k++)if(ctfs(k)>0.02*Math.max(c0,ctfs(1)))h=k;return h;
+  }
+
+  /* ---------------- time ---------------- */
+  let timeGeom=null;
+  function drawTime(){
+    const {ctx,w,h}=setupCanvas($("timeCanvas"));
+    const p={l:44,r:16,t:18,b:34},uMin=-0.3,uMax=1.3,rg=range(),N=state.N;
+    const px=u=>p.l+(u-uMin)/(uMax-uMin)*(w-p.l-p.r),py=v=>h-p.b-(v-rg.lo)/(rg.hi-rg.lo)*(h-p.t-p.b);
+    ctx.fillStyle=C.keep;ctx.fillRect(px(0),p.t,px(1)-px(0),h-p.t-p.b);
+    for(let i=0;i<=4;i++){const yy=p.t+i*(h-p.t-p.b)/4;line(ctx,p.l,yy,w-p.r,yy,C.grid,1);}
+    const y0=py(0);line(ctx,p.l,y0,w-p.r,y0,C.axis,1.2);
+    // impulse train
+    const tick=Math.min(24,(h-p.t-p.b)*0.15);
+    for(let n=Math.ceil(uMin*N);n<=Math.floor(uMax*N);n++){const xx=px(n/N);line(ctx,xx,y0,xx,y0-tick,C.comb,1);ctx.fillStyle=C.comb;ctx.beginPath();ctx.moveTo(xx,y0-tick-3);ctx.lineTo(xx-2.2,y0-tick+2);ctx.lineTo(xx+2.2,y0-tick+2);ctx.closePath();ctx.fill();}
+    // continuous signal: faint outside the period, solid inside
+    const M=700; const seg=(a,b,col,lw)=>{ctx.beginPath();for(let i=0;i<=M;i++){const u=a+(b-a)*i/M;const xx=px(u),yy=py(xu(u));i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);}ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.stroke();};
+    seg(uMin,0,C.blueSoft,1.6);seg(1,uMax,C.blueSoft,1.6);seg(0,1-1e-9,state.signal==="custom"?C.blue:C.blueSoft,state.signal==="custom"?2.2:2);
+    // samples
+    for(let n=Math.ceil(uMin*N);n<=Math.floor(uMax*N);n++){
+      const u=n/N,v=xu(u),xx=px(u),yy=py(v),inside=n>=0&&n<N;
+      ctx.globalAlpha=inside?1:0.38;line(ctx,xx,y0,xx,yy,C.blue,1.6);dot(ctx,xx,yy,Math.max(2,Math.min(3.4,60/N)),C.blue);ctx.globalAlpha=1;
+    }
+    const yM=p.t+9;line(ctx,px(0),yM,px(1),yM,C.violet,1.4);line(ctx,px(0),yM-4,px(0),yM+4,C.violet,1.4);line(ctx,px(1),yM-4,px(1),yM+4,C.violet,1.4);
+    text(ctx,`T₀ = ${fmtSec(state.T0)} = N·Tₛ`,(px(0)+px(1))/2,yM+11,"center",C.violet,"italic 11px Georgia");
+    if(N>=3){const a=px(1/N),b=px(2/N),yT=h-p.b+13;line(ctx,a,yT,b,yT,C.ink,1.1);line(ctx,a,yT-3,a,yT+3,C.ink);line(ctx,b,yT-3,b,yT+3,C.ink);text(ctx,"Tₛ",(a+b)/2,yT+10,"center",C.ink,"italic 10.5px Georgia");}
+    text(ctx,"0",px(0),h-p.b+13);text(ctx,"T₀",px(1),h-p.b+13);text(ctx,"t",w-p.r+6,y0,"left",C.muted,"italic 12px Georgia");
+    if(state.signal==="custom")text(ctx,"drag inside the period to draw",w-p.r-6,p.t+8,"right",C.violet,"600 10.5px system-ui");
+    timeGeom={px,py,uMin,uMax,rg,p};
+  }
+
+  /* ---------------- spectrum ---------------- */
+  let specGeom=null;
+  function layoutItems(){
+    const N=state.N,items=[];
+    if(state.view==="standard"){for(let k=0;k<N;k++)items.push({k,kk:k>N/2?k-N:k,slot:k,kept:true});}
+    else if(state.view==="centered"){for(let kk=-N/2;kk<N/2;kk++)items.push({k:(kk+N)%N,kk,slot:kk+N/2,kept:true});}
+    else {const lo=-Math.round(1.5*N),hi=Math.round(2.5*N);for(let k=lo;k<=hi;k++)items.push({k:((k%N)+N)%N,kk:k,slot:k-lo,kept:k>=0&&k<N});}
+    return items;
+  }
+  function drawSpec(){
+    const {ctx,w,h}=setupCanvas($("specCanvas"));
+    const N=state.N,a=dfs(),items=layoutItems(),S=items.length,full=state.view==="full",showRul=state.rulers&&!full;
+    const p={l:48,r:20,t:28,b:showRul?96:44},y0=h-p.b;
+    const px=slot=>p.l+(slot+0.5)/S*(w-p.l-p.r);
+    let peak=0.01;a.mag.forEach(v=>peak=Math.max(peak,v));
+    if(state.ctfs)items.forEach(it=>peak=Math.max(peak,ctfs(full?it.kk:it.kk)));
+    const py=v=>y0-v/(peak*1.15)*(y0-p.t);
+    if(full){ctx.fillStyle=C.keep;ctx.fillRect(px(items.findIndex(it=>it.kk===0)-0.5),p.t,px(items.findIndex(it=>it.kk===N-1)+0.5)-px(items.findIndex(it=>it.kk===0)-0.5),y0-p.t);}
+    else if(state.view==="standard")tints(ctx,px,p.t,y0,[[-0.5,N/2+0.5,false],[N/2+0.5,N-0.5,true]]);
+    else tints(ctx,px,p.t,y0,[[-0.5,N/2-0.5,true],[N/2-0.5,N-0.5,false]]);
+    gridFrame(ctx,p,w,y0,p.t);
+    if(full){const i0=items.findIndex(it=>it.kk===0),i1=items.findIndex(it=>it.kk===N);line(ctx,px(i1-0.5),p.t,px(i1-0.5),y0,"#8d93a3",1,[5,4]);
+      const yA=p.t+8;line(ctx,px(i0),yA,px(i1),yA,C.violet,1.3);line(ctx,px(i0),yA-3,px(i0),yA+3,C.violet,1.3);line(ctx,px(i1),yA-3,px(i1),yA+3,C.violet,1.3);
+      text(ctx,"N-periodic: aₖ₊ₙ = aₖ",(px(i0)+px(i1))/2,yA-9,"center",C.violet,"700 11px system-ui");
+      text(ctx,"the N we keep: the DFT, k = 0 … N−1",(px(i0)+px(i1-1))/2,yA+11,"center",C.violet,"600 10.5px system-ui");}
+    else text(ctx,state.view==="standard"?"positive: low → high │ negative: high → low":"negative: high → low │ positive: low → high",(p.l+w-p.r)/2,p.t+9,"center","#6b7280","600 10.5px system-ui");
+    // stems
+    const geom=[];
+    for(const it of items){
+      const cls=binClass(it.k,N),col=binColor(cls),xx=px(it.slot),m=a.mag[it.k],yy=py(m);
+      ctx.globalAlpha=it.kept?1:0.32;line(ctx,xx,y0,xx,yy,col,S>48?1.2:1.7);dot(ctx,xx,yy,Math.max(1.6,Math.min(3.4,110/S)),col);ctx.globalAlpha=1;
+      if(state.hoverK===it.slot){ctx.strokeStyle=C.ink;ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(xx,yy,7,0,TAU);ctx.stroke();}
+      if(Math.abs(state.wrate-it.k)<1e-9&&state.winding&&it.kept){ctx.strokeStyle=C.orange;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(xx,yy,6,0,TAU);ctx.stroke();}
+      geom.push({...it,x:xx,y:yy,mag:m,cls});
+    }
+    if(state.ctfs)for(const it of items){const c=ctfs(it.kk);if(c>peak*0.004)diamond(ctx,px(it.slot),py(c),5,C.orange);}
+    // rulers / ticks
+    if(showRul){
+      const every=N>=48?8:N>=24?4:N>=12?2:1;
+      const pick=geom.filter(g=>(state.view==="standard"?g.k:g.kk+N/2)%every===0||g.k===N/2);
+      rulers(ctx,p,w,y0,[
+        {name:"k",items:pick.map(g=>({x:g.x,label:String(state.view==="centered"?g.kk:g.k).replace("-","−"),color:C.ink}))},
+        {name:"ω",items:pick.map(g=>({x:g.x,label:piFrac(TAU*g.kk/N),color:binColor(g.cls)}))},
+        {name:"f",items:pick.map(g=>({x:g.x,label:fmtHz(g.kk*f0()),color:binColor(g.cls)}))},
+      ]);
+    } else if(full){
+      for(const g of geom){if(g.kk%(N/2)!==0)continue;const kk=g.kk,lbl=kk===0?"0":kk===N?"N":kk===-N?"−N":Math.abs(kk)===N/2?(kk<0?"−":"")+"N/2":(kk/N%1===0?`${kk/N}N`:`${kk*2/N}N/2`.replace("-","−"));line(ctx,g.x,y0-3,g.x,y0+3,C.axis);text(ctx,lbl,g.x,y0+13);}
+    } else {for(const g of geom){if((state.view==="standard"?g.k:g.kk+N/2)%(N>=32?8:N>=16?4:2)===0||g.k===N/2)text(ctx,String(state.view==="centered"?g.kk:g.k).replace("-","−"),g.x,y0+13);}}
+    text(ctx,"k",w-p.r+6,y0,"left",C.muted,"italic 12px Georgia");
+    text(ctx,"|aₖ|",p.l-6,p.t+6,"right",C.muted,"italic 11px Georgia");
+    specGeom={geom,px,py,a};
+  }
+
+  /* ---------------- winding ---------------- */
+  let windGeom=null;
+  function drawWind(){
+    if(!state.winding)return;
+    const {ctx,w,h}=setupCanvas($("windCanvas"));
+    const N=state.N,r=state.wrate,x=samples();
+    let R=0.5;for(let i=0;i<=200;i++)R=Math.max(R,Math.abs(xu(i/200)));R*=1.12;
+    const path=[];if(state.wcurve){for(let i=0;i<=600;i++){const u=i/600,v=xu(u),th=-TAU*r*u;path.push({re:v*Math.cos(th),im:v*Math.sin(th)});}}
+    const pts=[];let cre=0,cim=0;for(let n=0;n<N;n++){const th=-TAU*r*n/N,re=x[n]*Math.cos(th),im=x[n]*Math.sin(th);pts.push({re,im,n});cre+=re;cim+=im;}
+    const centroid={re:cre/N,im:cim/N},integer=Math.abs(r-Math.round(r))<1e-9,k=Math.round(r);
+    const arc=r>0?((TAU*r/N)%TAU):null;
+    const g=windingPlane(ctx,w,h,{R,path:state.wcurve?path:null,pts,centroid,arc,arcLabel:"2πk/N = "+piFrac(TAU*r/N),centroidLabel:integer?`centroid = a${k}`:"centroid"});
+    windGeom=g;
+    $("turnMetric").innerHTML=`turn per sample <b>2π·${r%1?r.toFixed(2):r}/${N} = ${piFrac(TAU*r/N)}</b>`;
+    $("centroidMetric").innerHTML=integer?`centroid <b>${fmtC(centroid.re,centroid.im)} = a<sub>${k}</sub></b> &nbsp;→&nbsp; X[${k}] = N·a<sub>${k}</sub> = <b>${fmtC(N*centroid.re,N*centroid.im,2)}</b>`:`centroid <b>${fmtC(centroid.re,centroid.im)}</b> — not a bin: the loop does not close`;
+  }
+
+  /* ---------------- readouts ---------------- */
+  function updateReadouts(){
+    const N=state.N;
+    $("nOut").textContent=String(N);
+    $("f0Metric").innerHTML=`f₀ = 1/T₀ <b>${fmtHz(f0())}</b>`;
+    $("fsMetric").innerHTML=`sampling <b>Tₛ = T₀/N = ${fmtSec(Ts())}, fₛ = N·f₀ = ${fmtHz(fs())}</b>`;
+    $("dfMetric").innerHTML=`bin spacing <b>Δf = f₀ = ${fmtHz(f0())}</b>`;
+    const hmax=highestHarmonic();$("aliasWarn").hidden=!(2*hmax>=N);
+    $("copiesKey").hidden=state.view!=="full";$("ctfsKey").hidden=!state.ctfs;
+    $("windCard").hidden=!state.winding;
+    $("timeCanvas").classList.toggle("draw",state.signal==="custom");
+    $("specCaption").innerHTML=state.view==="full"?"The Fourier series of the sampled signal: a<sub>k</sub> = (1/N)Σ x[n]e<sup>−j2πkn/N</sup>, plotted for every k. It repeats with period N — only N values exist, and the DFT is the window we keep.":state.view==="standard"?"The N bins the DFT hands you, in the order it computes them. Bins past N/2 are the negative frequencies, folded up. Hover a bin for its value, its digital frequency and its frequency in hertz; click it to wind at that rate.":"The same N bins, unfolded around dc — what numpy.fft.fftshift shows. Negative harmonics on the left, positive on the right.";
+    $("specNote").innerHTML=state.view==="full"?"<b>Only N numbers exist.</b> Because e<sup>−j2π(k+N)n/N</sup> = e<sup>−j2πkn/N</sup>, coefficient k+N is coefficient k again. Sampling in time made the spectrum periodic in frequency. Switch on the true Fourier series c<sub>k</sub> to see that a<sub>k</sub> is the sum of all the copies of c<sub>k</sub> that land on bin k — identical to c<sub>k</sub> as long as the copies do not overlap.":"<b>Bin k is the harmonic k·f₀.</b> For a periodic signal the DFT bins are exactly the Fourier-series harmonics: Δf = f₀, so the N bins cover −N/2·f₀ … N/2·f₀ = ±fₛ/2. Relabeling the axis (k → ω = 2πk/N → f = k·f₀) changes units, not the N numbers.";
+    const ss=$("rateSlider");ss.max=N;if(state.wrate>N){state.wrate=N;}ss.value=state.wrate;$("rateOut").textContent=state.wrate%1?state.wrate.toFixed(2):String(state.wrate);
+  }
+  function drawAll(){updateReadouts();drawTime();drawSpec();drawWind();}
+
+  /* ---------------- interaction ---------------- */
+  bindHover($("timeCanvas"),$("timeTip"),(mx,my,rect)=>{
+    if(!timeGeom||state.paintRange)return null;const g=timeGeom,u=g.uMin+(mx-g.p.l)/(rect.width-g.p.l-g.p.r)*(g.uMax-g.uMin);
+    const n=Math.round(u*state.N);if(n<0||n>=state.N)return null;const v=xu(n/state.N);
+    return {html:`n = ${n} &nbsp;·&nbsp; t = nTₛ = ${fmtSec(n*Ts())}<br>x[n] = ${v.toFixed(3)}`,x:g.px(n/state.N),y:g.py(v)};
+  });
+  bindPaint($("timeCanvas"),{
+    enabled:()=>state.signal==="custom",
+    toIndex:(mx,rect)=>{if(!timeGeom)return null;const g=timeGeom,u=g.uMin+(mx-g.p.l)/(rect.width-g.p.l-g.p.r)*(g.uMax-g.uMin);if(u<0||u>=1)return null;return Math.floor(u*G);},
+    toValue:(my,rect)=>{const g=timeGeom;if(!state.paintRange)state.paintRange=g.rg;const rg=state.paintRange,p=g.p;const v=rg.lo+(rect.height-p.b-my)/(rect.height-p.t-p.b)*(rg.hi-rg.lo);return Math.max(rg.lo,Math.min(rg.hi,v));},
+    paint:(i0,i1,v0,v1)=>{const a=Math.min(i0,i1),b=Math.max(i0,i1);for(let i=a;i<=b;i++){const t=b===a?0:(i-a)/(b-a);state.custom[i]=i0<=i1?v0+(v1-v0)*t:v1+(v0-v1)*t;}state.customVersion++;drawAll();},
+    done:()=>{state.paintRange=null;drawAll();},
+  });
+  bindHover($("specCanvas"),$("specTip"),(mx,my,rect)=>{
+    if(!specGeom)return null;let best=null,bd=14;for(const g of specGeom.geom){const d=Math.abs(g.x-mx);if(d<bd){bd=d;best=g;}}
+    state.hoverK=best?best.slot:null;drawSpec();if(!best)return null;
+    const N=state.N,kind=best.cls==="dc"?"dc":best.cls==="nyq"?"ω = π, the highest frequency":best.cls==="pos"?"positive frequency":`negative frequency (k − N = ${best.k-N})`;
+    const copy=state.view==="full"&&!best.kept?`<br>a copy of bin k = ${best.k}`:"";
+    const kk=state.view==="full"?best.k>N/2?best.k-N:best.k:best.kk;
+    return {html:`<b>k = ${best.k}</b> · ${kind}${copy}<br>|a<sub>k</sub>| = ${best.mag.toFixed(3)} &nbsp;→&nbsp; |X[k]| = N·|a<sub>k</sub>| = ${(best.mag*N).toFixed(2)}<br>ω<sub>k</sub> = 2π·${kk}/${N} = ${piFrac(TAU*kk/N)} rad/sample<br>f = ${kk}·f₀ = ${fmtHz(kk*f0())}`,x:best.x,y:best.y,pad:130,minY:60};
+  },()=>{state.hoverK=null;drawSpec();});
+  $("specCanvas").addEventListener("click",()=>{ if(state.hoverK===null||!specGeom)return;const g=specGeom.geom.find(q=>q.slot===state.hoverK);if(!g)return;state.wrate=g.k;if(!state.winding){state.winding=true;syncChips();}drawAll();$("windCard").scrollIntoView({behavior:"smooth",block:"nearest"});});
+  bindHover($("windCanvas"),$("windTip"),(mx,my)=>{
+    if(!windGeom)return null;let best=null,bd=14;for(const q of windGeom.geom){const d=Math.hypot(q.x-mx,q.y-my);if(d<bd){bd=d;best=q;}}
+    if(!best)return null;const N=state.N;return {html:`n = ${best.n} &nbsp;·&nbsp; x[n] = ${samples()[best.n].toFixed(3)}<br>turned by 2πk·n/N = ${piFrac(TAU*state.wrate*best.n/N)}`,x:best.x,y:best.y-4};
+  });
+  const syncChips=bindChips($("chips"),state,()=>drawAll());
+  bindChips($("windChips"),state,()=>drawWind());
+  bindSegmented($("viewGroup"),()=>state.view,v=>{state.view=v;drawAll();});
+  $("signalSelect").addEventListener("change",e=>selectSignal(e.target.value));
+  $("t0Select").addEventListener("change",e=>{state.T0=Number(e.target.value);drawAll();});
+  $("nSlider").addEventListener("input",e=>{state.N=Number(e.target.value);drawAll();});
+  $("rateSlider").addEventListener("input",e=>{state.wrate=Number(e.target.value);drawAll();});
+  $("rateDown").addEventListener("click",()=>{state.wrate=Math.max(0,Math.ceil(state.wrate)-1);drawAll();});
+  $("rateUp").addEventListener("click",()=>{state.wrate=Math.min(state.N,Math.floor(state.wrate)+1);drawAll();});
+  function selectSignal(name){
+    if(name==="custom"&&state.signal!=="custom"){for(let i=0;i<G;i++)state.custom[i]=xu(i/G);state.customVersion++;}
+    state.signal=name;$("signalSelect").value=name;drawAll();
+  }
+  let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(drawAll,80);});
+
+  // deep links: ?preset=twoHarm-winding-N8-k1-full-ctfs-centered-T10
+  for(const tok of presetTokens()){
+    if(SIG[tok])state.signal=tok;
+    else if(tok==="winding")state.winding=true; else if(tok==="ctfs")state.ctfs=true;
+    else if(tok==="full"||tok==="centered"||tok==="standard")state.view=tok;
+    else if(tok==="norulers")state.rulers=false;
+    else if(/^N\d+$/.test(tok))state.N=Math.max(4,Math.min(64,Number(tok.slice(1))));
+    else if(/^k[\d.]+$/.test(tok))state.wrate=Number(tok.slice(1));
+    else if(/^T\d+$/.test(tok)){const ms=Number(tok.slice(1))/1000;if([...$("t0Select").options].some(o=>Number(o.value)===ms))state.T0=ms;}
+  }
+  if(state.signal==="custom"){for(let i=0;i<G;i++)state.custom[i]=presetValue("twoHarm",i/G);}
+  $("signalSelect").value=state.signal;$("t0Select").value=String(state.T0);$("nSlider").value=state.N;
+  syncChips();bindSegmented($("viewGroup"),()=>state.view,v=>{state.view=v;drawAll();});
+  drawAll();
+})();
+</script>
+</body>
+</html>
