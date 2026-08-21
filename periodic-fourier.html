@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Periodic Signals: Fourier Series → DFS → DFT · CSE 219</title>
+<title>Periodic · CSE 219</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
 <link rel="stylesheet" href="assets/site.css" />
 <script src="assets/site.js" defer></script>
@@ -46,7 +46,9 @@
   .metric b{color:var(--ink);font-size:12.5px;font-variant-numeric:tabular-nums;margin-left:5px}
   .metric.warn{border-color:#fdba74;background:#fff7ed;color:#9a3412}
   .plot-card{margin:0 0 18px}
-  .plot-wrap{height:280px;background:var(--plot);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative}
+  .plots{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+  .plots .plot-card{margin:0}
+  .plot-wrap{height:400px;background:var(--plot);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative}
   .plot-wrap.spec{height:400px}.plot-wrap.wind{height:360px}
   canvas{display:block;width:100%;height:100%;touch-action:none}
   #specCanvas{cursor:pointer}#timeCanvas.draw{cursor:crosshair}
@@ -63,7 +65,7 @@
   .btn:hover{background:#fafbff;border-color:#c7cad7}
   .mantra{background:linear-gradient(135deg,#eef2ff,#f0fdfa);border:1px solid #dcdcff;border-radius:12px;padding:12px 16px;margin-top:4px;font-size:13px;color:#3d4457;line-height:1.6}
   .mantra b{color:var(--violet-dark)}
-  @media(max-width:1080px){.controls{grid-template-columns:1fr 1fr}.plot-wrap{height:250px}.plot-wrap.spec{height:360px}.plot-wrap.wind{height:320px}.wind-controls{grid-template-columns:1fr}}
+  @media(max-width:1080px){.controls{grid-template-columns:1fr 1fr}.plots{grid-template-columns:1fr}.plot-wrap{height:300px}.plot-wrap.spec{height:360px}.plot-wrap.wind{height:320px}.wind-controls{grid-template-columns:1fr}}
   @media(max-width:680px){.lab{padding:22px 14px 60px}.lab-header{display:block}.limit-pill{display:inline-block;margin-top:13px;white-space:normal}.lab-header h1{font-size:25px}.card{padding:17px 15px}.controls{grid-template-columns:1fr}.control-bottom{align-items:stretch;flex-direction:column}.plot-wrap{height:220px}.plot-wrap.spec{height:330px}.card-head{display:block}}
 </style>
 </head>
@@ -75,7 +77,7 @@
       <header class="lab-header">
         <div>
           <div class="eyebrow">DTFT &amp; DFT · lecture 1 · periodic signals</div>
-          <h1>Periodic Signals: Fourier Series → DFS → DFT</h1>
+          <h1>Periodic</h1>
           <p>One period of a signal, N samples of it, and the N numbers that describe both. Pick or draw a period, choose how densely to sample it, and read the result as Fourier-series coefficients, as the N-periodic DFS, as the DFT, and in hertz. The winding picture and the full periodic spectrum are there when you want them — toggle them on.</p>
         </div>
         <div class="limit-pill">X[k] = N·a<sub>k</sub>, &nbsp;k = 0 … N−1</div>
@@ -137,6 +139,7 @@
         </div>
       </section>
 
+      <section class="plots">
       <article class="card plot-card">
         <div class="card-head">
           <div><h2><span class="step">time</span>One period, N samples</h2><p id="timeCaption">x(t) with its impulse-train samples x[n] = x(nTₛ). One period T₀ holds exactly N of them; the faint copies remind you the signal goes on forever.</p></div>
@@ -163,6 +166,8 @@
         </div>
         <div class="teaching-note" id="specNote"></div>
       </article>
+
+      </section>
 
       <article class="card plot-card" id="windCard" hidden>
         <div class="card-head">
