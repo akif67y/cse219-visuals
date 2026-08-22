@@ -37,7 +37,7 @@
       { href: "image-edge-detection-fourier.html", icon: "⚡", label: "Image Edge Finder" },
       { href: "image-compression-lab.html", icon: "🖼️", label: "Let’s Compress Images" },
     ],
-    footer: "Anik Saha<br>aaniksahaa.2001@gmail.com",
+    footer: "Ashrafur Rahman<br>ashrafur@cse.buet.ac.bd<br><br>Anik Saha<br>aaniksahaa.2001@gmail.com",
   };
   // --------------------------------------------------------------------
 
