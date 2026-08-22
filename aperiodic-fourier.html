@@ -257,7 +257,7 @@
     ctx.fillStyle=C.keep;ctx.fillRect(px(-0.5),p.t,px(N-0.5)-px(-0.5),h-p.t-p.b);
     for(let i=0;i<=4;i++){const yy=p.t+i*(h-p.t-p.b)/4;line(ctx,p.l,yy,w-p.r,yy,C.grid,1);}
     const y0=py(0);line(ctx,p.l,y0,w-p.r,y0,C.axis,1.2);
-    ctx.beginPath();const K=600;for(let i=0;i<=K;i++){const u=i/K*(1-1e-9);const xx=px(u*N-0.5),yy=py(xu(u));i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);}
+    ctx.beginPath();const K=600;for(let i=0;i<=K;i++){const u=i/K*(1-1e-9);const xx=px(u*N),yy=py(xu(u));i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);}
     ctx.strokeStyle=state.signal==="custom"?C.blue:C.blueSoft;ctx.lineWidth=state.signal==="custom"?2.2:1.8;ctx.stroke();
     const r=Math.max(1.6,Math.min(3.4,160/Mlen)),x=samples();
     for(let n=0;n<Mlen;n++){const xx=px(n);if(n<N){const yy=py(x[n]);line(ctx,xx,y0,xx,yy,C.blue,Mlen>64?1:1.5);dot(ctx,xx,yy,r,C.blue);}else hollow(ctx,xx,y0,r,C.zero,1.2);}
@@ -383,7 +383,7 @@
   });
   bindPaint($("timeCanvas"),{
     enabled:()=>state.signal==="custom",
-    toIndex:(mx,rect)=>{if(!timeGeom)return null;const g=timeGeom,u=((mx-g.p.l)/(rect.width-g.p.l-g.p.r)*g.Mlen)/g.N;if(u<0||u>=1)return null;return Math.floor(u*G);},
+    toIndex:(mx,rect)=>{if(!timeGeom)return null;const g=timeGeom,u=(((mx-g.p.l)/(rect.width-g.p.l-g.p.r)*g.Mlen)-0.5)/g.N;if(u<0||u>=1)return null;return Math.floor(u*G);},
     toValue:(my,rect)=>{const g=timeGeom;if(!state.paintRange)state.paintRange=g.rg;const rg=state.paintRange,p=g.p;const v=rg.lo+(rect.height-p.b-my)/(rect.height-p.t-p.b)*(rg.hi-rg.lo);return Math.max(rg.lo,Math.min(rg.hi,v));},
     paint:(i0,i1,v0,v1)=>{const a=Math.min(i0,i1),b=Math.max(i0,i1);for(let i=a;i<=b;i++){const t=b===a?0:(i-a)/(b-a);state.custom[i]=i0<=i1?v0+(v1-v0)*t:v1+(v0-v1)*t;}drawAll();},
     done:()=>{state.paintRange=null;drawAll();},
