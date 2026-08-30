@@ -87,9 +87,10 @@
         <div class="fn-col">
           <h3><span class="dot f"></span> x[m] — fixed (drag the stems to edit)</h3>
           <select class="fn" id="xSelect">
-            <option value="deck">{1, 2, 3, 4} — the lecture example</option>
-            <option value="ramp">{3, 1, 4, 1, 5}</option>
-            <option value="pulse">{0, 2, 4, 4, 2, 0}</option>
+            <option value="deck">{2,4,5,6,5,3,2,1} — the lecture example</option>
+            <option value="wave">wave — {0,2,4,3,1,2,4,2,1,0}</option>
+            <option value="burst">burst — 12 samples</option>
+            <option value="pulse">pulse — {0,0,3,4,4,4,3,0,0,0}</option>
             <option value="random">random</option>
           </select>
           <div class="formula" id="xFormula"></div>
@@ -98,9 +99,10 @@
         <div class="fn-col">
           <h3><span class="dot g"></span> h[j] — flips, slides &amp; repeats (drag to edit)</h3>
           <select class="fn" id="hSelect">
-            <option value="pair">{1, 1} — 2-tap moving sum</option>
-            <option value="smooth">{1, 2, 1} — smoother</option>
-            <option value="decay">{2, 1}</option>
+            <option value="smooth">{1, 2, 1} — the lecture example</option>
+            <option value="wide">{1, 2, 2, 1} — wider smoother</option>
+            <option value="decay">{3, 2, 1, 1} — decay</option>
+            <option value="box">{1, 1, 1, 1, 1} — boxcar</option>
             <option value="random">random</option>
           </select>
           <div class="formula" id="hFormula"></div>
@@ -108,10 +110,16 @@
         </div>
       </div>
       <div class="seg-row">
-        <span class="seg-label">zero-padding</span>
+        <span class="seg-label">view</span>
+        <div class="segmented" id="viewGroup" role="group" aria-label="View">
+          <button type="button" data-value="wheel">the clock — stems on a wheel</button>
+          <button type="button" data-value="wrap">wrap-around — ((n−m)) mod N</button>
+          <button type="button" data-value="extend">periodic extension — unrolled clock</button>
+        </div>
+        <span class="seg-label" style="margin-left:14px">zero-padding</span>
         <div class="segmented" id="padGroup" role="group" aria-label="Zero padding">
-          <button type="button" data-value="circ">none — circular, length N = max(L, M)</button>
-          <button type="button" data-value="pad">pad to L + M − 1 → circular becomes linear</button>
+          <button type="button" data-value="circ">none — circular</button>
+          <button type="button" data-value="pad">pad to L + M − 1 → linear</button>
         </div>
       </div>
     </section>
@@ -162,13 +170,13 @@ const $ = id => document.getElementById(id);
 /* ====================================================================
    STATE + MATHS
    ==================================================================== */
-const PX = { deck:[1,2,3,4], ramp:[3,1,4,1,5], pulse:[0,2,4,4,2,0] };
-const PH = { pair:[1,1], smooth:[1,2,1], decay:[2,1] };
+const PX = { deck:[2,4,5,6,5,3,2,1], wave:[0,2,4,3,1,2,4,2,1,0], burst:[0,1,3,4,4,2,1,2,3,1,0,0], pulse:[0,0,3,4,4,4,3,0,0,0] };
+const PH = { smooth:[1,2,1], wide:[1,2,2,1], decay:[3,2,1,1], box:[1,1,1,1,1] };
 const ri = (a,b)=> a+Math.floor(Math.random()*(b-a+1));
-const randX = ()=> Array.from({length:ri(4,6)},()=>ri(0,4));
-const randH = ()=> Array.from({length:ri(2,3)},()=>ri(0,2));
+const randX = ()=> Array.from({length:ri(8,12)},()=>ri(0,4));
+const randH = ()=> Array.from({length:ri(3,4)},()=>ri(0,3));
 
-const S = { x:PX.deck.slice(), h:PH.pair.slice(), mode:'circ', n:0, timer:null };
+const S = { x:PX.deck.slice(), h:PH.smooth.slice(), mode:'circ', view:'wheel', n:0, timer:null };
 
 const L = ()=>S.x.length, M = ()=>S.h.length;
 const N = ()=> S.mode==='pad' ? L()+M()-1 : Math.max(L(),M());
@@ -234,79 +242,168 @@ function bindEdit(cvId, getArr){
   cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
 }
 
-/* ---- main plot ---- */
+/* ---- main plot: one of three views on top, the outputs below ---- */
 function drawMain(){
   const cv=$('cvMain'); const {g,w,h}=fit(cv); g.clearRect(0,0,w,h);
-  const n=S.n, NN=N(), yl=yLin(), yc=yCirc(), tp=taps(n);
-  const mLo=-M()-0.6, mHi=Math.max(NN,yl.length)+M()*0+1.6;
-  const R={x0:16,y0:14,w:w-30,h:h-46};
-  const vmax=Math.max(4,...yc,...yl)*1.12;
-  const X=m=>R.x0+(m-mLo)/(mHi-mLo)*R.w, Y=v=>R.y0+R.h-(v/vmax)*R.h;
+  const topH=Math.round(h*0.62);
+  if(S.view==='wheel') drawWheelTop(g,w,topH);
+  else if(S.view==='extend') drawExtendTop(g,w,topH);
+  else drawWrapTop(g,w,topH);
+  g.strokeStyle='#eef0f6'; g.lineWidth=1; g.beginPath(); g.moveTo(14,topH); g.lineTo(w-14,topH); g.stroke();
+  drawOutputs(g,w,h,topH);
+}
 
-  // the kept window m = 0 .. N-1
-  g.fillStyle='rgba(37,99,235,.05)';
-  g.fillRect(X(-0.5),R.y0,X(NN-0.5)-X(-0.5),R.h);
-  g.strokeStyle='#c6cbd8'; g.setLineDash([5,4]); g.lineWidth=1;
-  g.beginPath(); g.moveTo(X(-0.5),R.y0); g.lineTo(X(-0.5),R.y0+R.h); g.stroke();
-  g.beginPath(); g.moveTo(X(NN-0.5),R.y0); g.lineTo(X(NN-0.5),R.y0+R.h); g.stroke();
-  g.setLineDash([]);
-  g.font='700 11.5px system-ui'; g.fillStyle='#6b7280'; g.textAlign='center'; g.textBaseline='top';
-  g.fillText(S.mode==='pad'?`the padded block, m = 0 … ${NN-1}`:`the N = ${NN} kept samples`,(X(-0.5)+X(NN-0.5))/2,R.y0+2);
-
-  // grid + axis
-  g.strokeStyle='#eef0f6'; for(let v=1;v<vmax;v++){ if(vmax<=14||v%2===0){g.beginPath();g.moveTo(R.x0,Y(v));g.lineTo(R.x0+R.w,Y(v));g.stroke();} }
-  g.strokeStyle='#9aa1b1'; g.lineWidth=1.3; g.beginPath(); g.moveTo(R.x0,Y(0)); g.lineTo(R.x0+R.w,Y(0)); g.stroke();
+/* the shared output strip: black circular dots build up against orange linear rings */
+function drawOutputs(g,w,h,topH){
+  const n=S.n, NN=N(), yl=yLin(), yc=yCirc(), len=Math.max(NN,yl.length);
+  const p={l:26,r:16,t:topH+22,b:24};
+  const vmax=Math.max(1,...yc,...yl)*1.15;
+  const X=k=>p.l+(k+0.5)/len*(w-p.l-p.r), Y=v=>h-p.b-(v/vmax)*(h-p.b-p.t);
+  g.font='700 11px system-ui'; g.fillStyle='#6b7280'; g.textAlign='left'; g.textBaseline='top';
+  g.fillText('the output — black: circular y[n] = IDFT{X·H} · orange rings: true linear (x∗h)[n]',p.l,topH+5);
+  g.strokeStyle='#9aa1b1'; g.lineWidth=1.3; g.beginPath(); g.moveTo(p.l,Y(0)); g.lineTo(w-p.r,Y(0)); g.stroke();
   g.font='10.5px system-ui'; g.fillStyle='#9aa1b1'; g.textAlign='center'; g.textBaseline='top';
-  for(let m=Math.ceil(mLo);m<=Math.floor(mHi);m++) g.fillText(String(m),X(m),Y(0)+6);
-
-  // x[m] — red, fixed (zeros of the padding drawn hollow)
-  for(let m=0;m<NN;m++){
-    const v=xAt(m);
-    if(v===0){ stem(g,X,Y,m,0,0,'#f3b4b4',1.6,3.4,false); }
-    else stem(g,X,Y,m,0,v,'#dc2626',2.6,4.4);
+  for(let k=0;k<len;k++) g.fillText(String(k),X(k),Y(0)+6);
+  if(yl.length>NN){
+    const bx=(X(NN-1)+X(NN))/2;
+    g.strokeStyle='#c6cbd8'; g.setLineDash([4,3]); g.beginPath(); g.moveTo(bx,p.t-4); g.lineTo(bx,Y(0)); g.stroke(); g.setLineDash([]);
+    g.font='10.5px system-ui'; g.fillStyle='#6b7280'; g.textAlign='left'; g.fillText('past N−1',bx+4,p.t-4);
   }
-  // h̃[n-m] — blue taps; ghosts of the periodic copies; wrapped taps orange
-  tp.forEach(t=>{
-    if(t.w===0) return;
-    if(!t.wrapped){
-      stem(g,X,Y,t.pos,0,t.w,'#2563eb',2.6,4.4);
-      // faint periodic copies left and right
-      [t.pos-NN,t.pos+NN].forEach(p=>{ if(p>mLo&&p<mHi&&(p<-0.5||p>NN-0.5)){ g.globalAlpha=.3; stem(g,X,Y,p,0,t.w,'#2563eb',2,3.4); g.globalAlpha=1; } });
-    }else{
-      // ghost at its natural (off-window) spot + the wrapped tap inside, orange
-      g.globalAlpha=.45; stem(g,X,Y,t.pos,0,t.w,'#2563eb',2,3.6,false,[4,3]); g.globalAlpha=1;
-      stem(g,X,Y,t.at,0,t.w,'#ea580c',2.8,4.6);
-      // re-entry arrow
-      const ax=X(t.pos), bx=X(t.at), ay=Y(t.w)-10;
-      g.strokeStyle='#ea580c'; g.lineWidth=1.6; g.beginPath();
-      g.moveTo(ax,ay); g.quadraticCurveTo((ax+bx)/2, ay-34, bx, ay); g.stroke();
-      g.fillStyle='#ea580c'; g.beginPath(); g.moveTo(bx,ay); g.lineTo(bx-4,ay-7); g.lineTo(bx+4,ay-7); g.closePath(); g.fill();
-      g.font='700 10.5px system-ui'; g.textAlign='center'; g.textBaseline='bottom';
-      g.fillText('re-enters N later',(ax+bx)/2,ay-36);
-    }
-  });
-  // products — purple, at the window positions the taps touch
-  tp.forEach(t=>{
-    if(t.w===0) return;
-    const p=t.w*xAt(t.at); if(p===0) return;
-    g.globalAlpha=.5; stem(g,X,Y,t.at+0.14,0,p,'#7c3aed',3.4,0); g.globalAlpha=1;
-    g.fillStyle='#7c3aed'; g.beginPath();
-    const px=X(t.at+0.14), py=Y(p);
-    g.moveTo(px,py-5); g.lineTo(px+5,py); g.lineTo(px,py+5); g.lineTo(px-5,py); g.closePath(); g.fill();
-  });
-  // true linear result — orange rings (always visible; tail lives past N-1 in circular mode)
-  for(let k=0;k<yl.length;k++){
-    g.strokeStyle='#ea580c'; g.lineWidth=1.6; g.beginPath(); g.arc(X(k),Y(yl[k]),5.2,0,7); g.stroke();
-  }
-  // circular output — black dots, built up to the current n
+  for(let k=0;k<yl.length;k++){ g.strokeStyle='#ea580c'; g.lineWidth=1.6; g.beginPath(); g.arc(X(k),Y(yl[k]),5.2,0,7); g.stroke(); }
   for(let k=0;k<=n;k++){
     stem(g,X,Y,k,0,yc[k],k===n?'#111827':'#4b5563',k===n?3:2,k===n?5:4);
     g.font=(k===n?'800 12px':'700 11px')+' system-ui'; g.fillStyle=k===n?'#111827':'#4b5563';
     g.textAlign='center'; g.textBaseline='bottom'; g.fillText(String(yc[k]),X(k),Y(yc[k])-8);
   }
-  // current n marker
   g.strokeStyle='#111827'; g.setLineDash([4,4]); g.lineWidth=1.2;
-  g.beginPath(); g.moveTo(X(n),R.y0+14); g.lineTo(X(n),Y(0)); g.stroke(); g.setLineDash([]);
+  g.beginPath(); g.moveTo(X(n),p.t+10); g.lineTo(X(n),Y(0)); g.stroke(); g.setLineDash([]);
+}
+
+/* view 1 — the clock: x as a stem plot wrapped around a wheel, h's flipped taps inside */
+function drawWheelTop(g,w,topH){
+  const n=S.n, NN=N(), tp=taps(n);
+  const cx=w/2, cy=topH/2+6, R=Math.min(topH*0.30,120);
+  const vx=Math.max(4,...S.x), hx=Math.max(2,...S.h);
+  const ang=m=>Math.PI/2 - m*2*Math.PI/NN;             // m = 0 at 12 o'clock, clockwise
+  const at=(r,a)=>[cx+r*Math.cos(a), cy-r*Math.sin(a)];
+  g.strokeStyle='#dfe3ec'; g.lineWidth=1.6; g.beginPath(); g.arc(cx,cy,R,0,7); g.stroke();
+  for(let m=0;m<NN;m++){
+    const a=ang(m), v=xAt(m);
+    const [ix,iy]=at(R-14,a); g.font='10px system-ui'; g.fillStyle='#9aa1b1'; g.textAlign='center'; g.textBaseline='middle';
+    g.fillText(String(m),ix,iy);
+    if(v===0){ const [zx,zy]=at(R,a); g.strokeStyle='#f3b4b4'; g.lineWidth=1.6; g.beginPath(); g.arc(zx,zy,3.2,0,7); g.stroke(); }
+    else{
+      const len=v/vx*R*0.55, [x1,y1]=at(R,a), [x2,y2]=at(R+len,a);
+      g.strokeStyle='#dc2626'; g.lineWidth=2.6; g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke();
+      g.fillStyle='#dc2626'; g.beginPath(); g.arc(x2,y2,4,0,7); g.fill();
+      const [lx,ly]=at(R+len+14,a); g.font='700 12px system-ui'; g.fillText(String(v),lx,ly);
+    }
+  }
+  tp.forEach(t=>{
+    if(t.w===0) return;
+    const a=ang(t.at), col=t.wrapped?'#ea580c':'#2563eb';
+    const len=t.w/hx*R*0.34, [x1,y1]=at(R-2,a), [x2,y2]=at(R-2-len,a);
+    g.strokeStyle=col; g.lineWidth=2.6; g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke();
+    g.fillStyle=col; g.beginPath(); g.arc(x2,y2,3.6,0,7); g.fill();
+    const [lx,ly]=at(R-2-len-11,a); g.font='700 11.5px system-ui'; g.textAlign='center'; g.textBaseline='middle';
+    g.fillText(String(t.w),lx,ly);
+  });
+  if(S.n>0){
+    const a0=ang(0), a1=ang(S.n);
+    g.strokeStyle='#4f46e5'; g.lineWidth=2; g.beginPath(); g.arc(cx,cy,R*0.26,-a0,-a1); g.stroke();
+    const [ex,ey]=at(R*0.26,a1); g.fillStyle='#4f46e5'; g.beginPath(); g.arc(ex,ey,2.6,0,7); g.fill();
+    g.font='700 11px system-ui'; g.textAlign='center'; g.fillText(`${S.n} tick${S.n===1?'':'s'}`,cx,cy);
+  }
+  g.font='700 11.5px system-ui'; g.fillStyle='#6b7280'; g.textAlign='left'; g.textBaseline='top';
+  g.fillText('x (red) wrapped around the wheel · flipped h (blue) inside · rotate together with n',20,8);
+}
+
+/* view 2 — wrap-around: plain x in the window, taps whose index wrapped shown re-entering */
+function drawWrapTop(g,w,topH){
+  const n=S.n, NN=N(), tp=taps(n);
+  const mLo=-M()-0.6, mHi=NN+1.6;
+  const R={x0:16,y0:26,w:w-30,h:topH-64};
+  const pv=tp.map(t=>t.w*xAt(t.at));
+  const vmax=Math.max(4,...S.x,...pv)*1.15;
+  const X=m=>R.x0+(m-mLo)/(mHi-mLo)*R.w, Y=v=>R.y0+R.h-(v/vmax)*R.h;
+  g.fillStyle='rgba(37,99,235,.05)'; g.fillRect(X(-0.5),R.y0,X(NN-0.5)-X(-0.5),R.h);
+  g.strokeStyle='#c6cbd8'; g.setLineDash([5,4]); g.lineWidth=1;
+  [[-0.5],[NN-0.5]].forEach(([m])=>{ g.beginPath(); g.moveTo(X(m),R.y0); g.lineTo(X(m),R.y0+R.h); g.stroke(); });
+  g.setLineDash([]);
+  g.font='700 11.5px system-ui'; g.fillStyle='#6b7280'; g.textAlign='center'; g.textBaseline='top';
+  g.fillText(S.mode==='pad'?`the padded block, m = 0 … ${NN-1}`:`the N = ${NN} kept samples`,(X(-0.5)+X(NN-0.5))/2,8);
+  g.strokeStyle='#9aa1b1'; g.lineWidth=1.3; g.beginPath(); g.moveTo(R.x0,Y(0)); g.lineTo(R.x0+R.w,Y(0)); g.stroke();
+  g.font='10.5px system-ui'; g.fillStyle='#9aa1b1';
+  for(let m=Math.ceil(mLo);m<=Math.floor(mHi);m++) g.fillText(String(m),X(m),Y(0)+6);
+  for(let m=0;m<NN;m++){
+    const v=xAt(m);
+    if(v===0) stem(g,X,Y,m,0,0,'#f3b4b4',1.6,3.4,false);
+    else stem(g,X,Y,m,0,v,'#dc2626',2.6,4.4);
+  }
+  tp.forEach(t=>{
+    if(t.w===0) return;
+    if(!t.wrapped) stem(g,X,Y,t.pos,0,t.w,'#2563eb',2.6,4.4);
+    else{
+      g.globalAlpha=.45; stem(g,X,Y,t.pos,0,t.w,'#2563eb',2,3.6,false,[4,3]); g.globalAlpha=1;
+      stem(g,X,Y,t.at,0,t.w,'#ea580c',2.8,4.6);
+      const ax=X(t.pos), bx=X(t.at), ay=Y(t.w)-10;
+      g.strokeStyle='#ea580c'; g.lineWidth=1.6; g.beginPath();
+      g.moveTo(ax,ay); g.quadraticCurveTo((ax+bx)/2,ay-34,bx,ay); g.stroke();
+      g.fillStyle='#ea580c'; g.beginPath(); g.moveTo(bx,ay); g.lineTo(bx-4,ay-7); g.lineTo(bx+4,ay-7); g.closePath(); g.fill();
+      g.font='700 10.5px system-ui'; g.textAlign='center'; g.textBaseline='bottom';
+      g.fillText('((n−m)) mod N: re-enters here',(ax+bx)/2,ay-36);
+    }
+  });
+  tp.forEach(t=>{
+    if(t.w===0) return;
+    const p=t.w*xAt(t.at); if(p===0) return;
+    g.globalAlpha=.5; stem(g,X,Y,t.at+0.14,0,p,'#7c3aed',3.4,0); g.globalAlpha=1;
+    g.fillStyle='#7c3aed'; const px=X(t.at+0.14), py=Y(p);
+    g.beginPath(); g.moveTo(px,py-5); g.lineTo(px+5,py); g.lineTo(px,py+5); g.lineTo(px-5,py); g.closePath(); g.fill();
+  });
+}
+
+/* view 3 — the unrolled clock: x periodically extended, plain flipped h sliding */
+function drawExtendTop(g,w,topH){
+  const n=S.n, NN=N(), tp=taps(n);
+  const mLo=-NN-0.6, mHi=2*NN-0.4;
+  const R={x0:16,y0:26,w:w-30,h:topH-64};
+  const pv=tp.map(t=>t.w*xAt(t.pos));
+  const vmax=Math.max(4,...S.x,...pv)*1.15;
+  const X=m=>R.x0+(m-mLo)/(mHi-mLo)*R.w, Y=v=>R.y0+R.h-(v/vmax)*R.h;
+  g.fillStyle='rgba(37,99,235,.05)'; g.fillRect(X(-0.5),R.y0,X(NN-0.5)-X(-0.5),R.h);
+  g.strokeStyle='#c6cbd8'; g.setLineDash([5,4]); g.lineWidth=1;
+  [-0.5,NN-0.5].forEach(m=>{ g.beginPath(); g.moveTo(X(m),R.y0); g.lineTo(X(m),R.y0+R.h); g.stroke(); });
+  g.setLineDash([]);
+  g.font='700 11.5px system-ui'; g.fillStyle='#9aa1b1'; g.textAlign='center'; g.textBaseline='top';
+  g.fillText('the lap before',(X(mLo)+X(-0.5))/2,8);
+  g.fillStyle='#2563eb'; g.fillText('x̃ — the unrolled clock, one lap kept',(X(-0.5)+X(NN-0.5))/2,8);
+  g.fillStyle='#9aa1b1'; g.fillText('the lap after',(X(NN-0.5)+X(mHi))/2,8);
+  g.strokeStyle='#9aa1b1'; g.lineWidth=1.3; g.beginPath(); g.moveTo(R.x0,Y(0)); g.lineTo(R.x0+R.w,Y(0)); g.stroke();
+  g.font='10.5px system-ui'; g.fillStyle='#9aa1b1';
+  const grabbed=new Set(tp.filter(t=>t.w!==0&&(t.pos<0||t.pos>=NN)).map(t=>t.pos));
+  for(let m=Math.ceil(mLo);m<Math.ceil(mHi);m++){
+    const v=xAt(m), inMain=m>=0&&m<NN;
+    if(m===0||m===NN-1||m===-1||grabbed.has(m)) g.fillStyle='#9aa1b1', g.fillText(String(m),X(m),Y(0)+6);
+    if(v===0){ if(inMain||grabbed.has(m)) stem(g,X,Y,m,0,0,grabbed.has(m)?'#ea580c':'#f3b4b4',1.6,3.2,false); continue; }
+    if(grabbed.has(m)) stem(g,X,Y,m,0,v,'#ea580c',2.8,4.6);
+    else if(inMain) stem(g,X,Y,m,0,v,'#dc2626',2.6,4.2);
+    else { g.globalAlpha=.35; stem(g,X,Y,m,0,v,'#dc2626',2,3.4); g.globalAlpha=1; }
+  }
+  tp.forEach(t=>{ if(t.w!==0) stem(g,X,Y,t.pos,0,t.w,'#2563eb',2.6,4.2); });
+  tp.forEach(t=>{
+    if(t.w===0) return;
+    const p=t.w*xAt(t.pos); if(p===0) return;
+    g.globalAlpha=.5; stem(g,X,Y,t.pos+0.12,0,p,'#7c3aed',3.2,0); g.globalAlpha=1;
+    g.fillStyle='#7c3aed'; const px=X(t.pos+0.12), py=Y(p);
+    g.beginPath(); g.moveTo(px,py-5); g.lineTo(px+5,py); g.lineTo(px,py+5); g.lineTo(px-5,py); g.closePath(); g.fill();
+  });
+  const wraps=tp.filter(t=>t.w!==0&&t.pos<0);
+  if(wraps.length){
+    const t=wraps[0], ax=X(t.pos), ay=Y(t.w)-12;
+    g.font='700 10.5px system-ui'; g.fillStyle='#ea580c'; g.textAlign='center'; g.textBaseline='bottom';
+    g.fillText('grabs the previous lap — the wrap',ax+40,ay-4);
+  }
 }
 
 /* ---- the running sum, with wrap terms in orange ---- */
@@ -323,11 +420,20 @@ function updateSum(){
     (okay?` &nbsp;·&nbsp; matches linear ✓`:` &nbsp;·&nbsp; linear says ${yl[n]??0} — <span class="w">the orange term is the wrap</span>`);
 }
 function updateHint(){
-  $('hint').innerHTML = S.mode==='circ'
-    ? `The blue signal is h flipped and slid to n — but on N points it is <b>periodic</b>: the dashed ghost that slides off the left edge re-enters (orange) on the right and multiplies samples it was never meant to touch. Orange rings show the true linear convolution: its tail past n = ${N()-1} has nowhere to live. Now switch on <b>zero-padding</b> above.`
-    : `Both signals are padded to N = L + M − 1 = ${N()}. The wrapped tap still re-enters — but it lands on <b>padding zeros</b>, so every product it forms is 0. Every black dot now sits in its orange ring: circular = linear, tail included. This is why DFT-filtering works.`;
+  const pad = S.mode==='pad';
+  const H = {
+    wheel: pad
+      ? `Padded to N = ${N()}: the wheel has grown zero positions. The blue taps still rotate and still come round the far side — but there they meet only <b>padded zeros</b>. Circular = linear.`
+      : `x (red) is a stem plot wrapped around the wheel; h (blue) sits inside, written backwards. Each step of n rotates the taps one tick — a tap pushed past the top <b>re-enters on the other side</b> (orange): that is the wrap.`,
+    wrap: pad
+      ? `Both signals padded to N = L + M − 1 = ${N()}. The wrapped tap still re-enters — but it lands on <b>padding zeros</b>, so every product it forms is 0. Every black dot sits in its orange ring: circular = linear, tail included.`
+      : `The formula's ((n−m)) mod N in action: a tap whose index would go negative (dashed ghost) is <b>wrapped to the far end</b> (orange) and multiplies samples it was never meant to touch. Orange rings show true linear convolution — its tail past n = ${N()-1} has nowhere to live.`,
+    extend: pad
+      ? `The unrolled clock, padded: every lap now ends in ${M()-1===1?'a zero':'zeros'}, so the sliding window grabs nothing from the neighbouring lap. Circular = linear — same conclusion as the other two views.`
+      : `The clock, unrolled: x̃ repeats every lap. The flipped h slides exactly as in linear convolution — but whatever it touches on the <b>previous lap</b> (orange) is the wrap. Same sum as the other views, grouped differently.`,
+  };
+  $('hint').innerHTML = H[S.view];
 }
-
 /* ====================================================================
    WIRING
    ==================================================================== */
@@ -348,6 +454,11 @@ document.querySelectorAll('#padGroup button').forEach(b=>b.addEventListener('cli
   document.querySelectorAll('#padGroup button').forEach(x=>x.classList.toggle('active',x===b));
   redraw();
 }));
+document.querySelectorAll('#viewGroup button').forEach(b=>b.addEventListener('click',()=>{
+  S.view=b.dataset.value;
+  document.querySelectorAll('#viewGroup button').forEach(x=>x.classList.toggle('active',x===b));
+  redraw();
+}));
 $('nSlider').addEventListener('input',e=>{ S.n=parseInt(e.target.value,10); redraw(); });
 
 function stopAnim(){ if(S.timer){clearInterval(S.timer);S.timer=null;} $('animateBtn').disabled=false; $('stopBtn').disabled=true; }
@@ -366,10 +477,12 @@ window.addEventListener('resize',redraw);
     if(PX[t]){ S.x=PX[t].slice(); $('xSelect').value=t; }
     else if(PH[t]){ S.h=PH[t].slice(); $('hSelect').value=t; }
     else if(t==='pad') S.mode='pad';
+    else if(t==='wheel'||t==='wrap'||t==='extend') S.view=t;
     else if(/^n\d+$/.test(t)) S.n=parseInt(t.slice(1),10);
   });
   S.n=Math.min(Math.max(0,S.n),N()-1);
   document.querySelectorAll('#padGroup button').forEach(x=>x.classList.toggle('active',x.dataset.value===S.mode));
+  document.querySelectorAll('#viewGroup button').forEach(x=>x.classList.toggle('active',x.dataset.value===S.view));
 })();
 
 redraw();
