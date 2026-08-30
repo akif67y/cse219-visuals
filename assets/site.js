@@ -19,6 +19,7 @@
       { href: "index.html", icon: "🏠", label: "Home" },
       { group: "Convolution" },
       { href: "computing-convolution.html", icon: "📐", label: "Computing Convolutions" },
+      { href: "circular-convolution.html", icon: "🔄", label: "Circular Convolution" },
       { href: "listening-to-convolution.html", icon: "🎧", label: "Listening to Convolutions" },
       { group: "Fourier Series" },
       { href: "fourier-vibrating-string.html", icon: "〰️", label: "Vibrating String" },

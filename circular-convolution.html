@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🔄 Circular Convolution · CSE 219</title>
+<link rel="stylesheet" href="assets/site.css" />
+<script src="assets/site.js" defer></script>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#ffffff; --ink:#1c2333; --muted:#6b7280; --line:#e6e8ef;
+    --accent:#4f46e5; --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.06);
+    --radius:16px;
+    --f:#dc2626;        /* red   : x[m], fixed          */
+    --g:#2563eb;        /* blue  : h~[n-m], flips+slides */
+    --prod:#7c3aed;     /* purple: product               */
+    --conv:#111827;     /* black : circular output y[n]  */
+    --wrap:#ea580c;     /* orange: anything the wrap did */
+    --animate:#2563eb; --stop:#dc2626; --reset:#ea580c;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 20px 80px}
+  header.app{margin-bottom:20px}
+  .title h1{font-size:26px;margin:0;letter-spacing:-.02em}
+  .title p{margin:5px 0 0;color:var(--muted);font-size:14.5px;max-width:720px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:18px}
+  .card h2{margin:0 0 14px;color:var(--muted);font-weight:700;letter-spacing:.01em;text-transform:uppercase;font-size:12px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .fn-col h3{margin:0 0 8px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .dot{width:11px;height:11px;border-radius:50%;display:inline-block;flex:none}
+  .dot.f{background:var(--f)} .dot.g{background:var(--g)}
+  select.fn{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-weight:600;background:#fff;color:var(--ink);cursor:pointer}
+  .formula{font-size:14px;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin:10px 0 0;color:#374151;text-align:center;min-height:38px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+  .seg-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px;border-top:1px solid var(--line);padding-top:16px}
+  .seg-label{font-size:12.5px;font-weight:800;color:#4b5563}
+  .segmented{display:inline-flex;background:#f3f4f8;border:1px solid var(--line);padding:3px;border-radius:11px;gap:2px}
+  .segmented button{border:0;background:transparent;color:#5b6472;font:inherit;font-size:12.5px;font-weight:800;padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .segmented button.active{background:#fff;color:var(--accent);box-shadow:0 1px 4px rgba(16,24,40,.12)}
+  .wave-wrap{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  canvas{display:block;width:100%;touch-action:none}
+  #cvX,#cvH{height:170px;cursor:crosshair}
+  #cvMain{height:430px}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;margin:14px 2px 0;font-size:13px}
+  .legend span{display:inline-flex;align-items:center;gap:7px;color:#374151}
+  .swatch{width:16px;height:4px;border-radius:2px;flex:none}
+  .oring{width:11px;height:11px;border-radius:50%;border:2px solid var(--wrap);flex:none}
+  .controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+  button.btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:10px 18px;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;transition:.12s;display:inline-flex;align-items:center;gap:7px}
+  button.btn:hover{filter:brightness(.97)}
+  button.btn:active{transform:translateY(1px)}
+  button.btn:disabled{opacity:.4;cursor:not-allowed}
+  button.animate{background:var(--animate);border-color:var(--animate);color:#fff}
+  button.stop{background:var(--stop);border-color:var(--stop);color:#fff}
+  button.reset{background:var(--reset);border-color:var(--reset);color:#fff}
+  .tbar{display:flex;align-items:center;gap:14px;margin-top:14px}
+  .tbar input[type=range]{flex:1;accent-color:var(--conv)}
+  .tval{font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;min-width:96px;background:#f1f2f7;border-radius:8px;padding:6px 10px;text-align:center}
+  .sumline{font-size:15px;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:14px;text-align:center;font-variant-numeric:tabular-nums}
+  .sumline .w{color:var(--wrap);font-weight:800}
+  .sumline b{font-weight:800}
+  .hint{font-size:13px;color:var(--muted);margin:14px 2px 0}
+  footer{text-align:center;color:var(--muted);font-size:12.5px;margin-top:28px;line-height:1.7}
+  footer a{color:var(--accent);text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+<div class="site">
+
+  <aside class="sidebar" id="siteSidebar"></aside>
+
+  <main class="content">
+  <div class="wrap">
+
+    <header class="app">
+      <div class="title">
+        <h1>🔄 Circular Convolution</h1>
+        <p>Multiplying two DFTs convolves the signals <b>circularly</b>. It's the same reflect-and-slide as ordinary convolution — except the flipped signal is <b>periodically extended</b>, so the tap that slides off one edge re-enters at the other. Watch <b>y[n] = Σ x[m]·h̃[n−m]</b> get built one sample at a time, then zero-pad and watch the wrap turn harmless.</p>
+      </div>
+    </header>
+
+    <!-- CONTROLS -->
+    <section class="card">
+      <div class="grid2">
+        <div class="fn-col">
+          <h3><span class="dot f"></span> x[m] — fixed (drag the stems to edit)</h3>
+          <select class="fn" id="xSelect">
+            <option value="deck">{1, 2, 3, 4} — the lecture example</option>
+            <option value="ramp">{3, 1, 4, 1, 5}</option>
+            <option value="pulse">{0, 2, 4, 4, 2, 0}</option>
+            <option value="random">random</option>
+          </select>
+          <div class="formula" id="xFormula"></div>
+          <div class="wave-wrap" style="margin-top:10px"><canvas id="cvX" height="170"></canvas></div>
+        </div>
+        <div class="fn-col">
+          <h3><span class="dot g"></span> h[j] — flips, slides &amp; repeats (drag to edit)</h3>
+          <select class="fn" id="hSelect">
+            <option value="pair">{1, 1} — 2-tap moving sum</option>
+            <option value="smooth">{1, 2, 1} — smoother</option>
+            <option value="decay">{2, 1}</option>
+            <option value="random">random</option>
+          </select>
+          <div class="formula" id="hFormula"></div>
+          <div class="wave-wrap" style="margin-top:10px"><canvas id="cvH" height="170"></canvas></div>
+        </div>
+      </div>
+      <div class="seg-row">
+        <span class="seg-label">zero-padding</span>
+        <div class="segmented" id="padGroup" role="group" aria-label="Zero padding">
+          <button type="button" data-value="circ">none — circular, length N = max(L, M)</button>
+          <button type="button" data-value="pad">pad to L + M − 1 → circular becomes linear</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAIN -->
+    <section class="card">
+      <h2>Reflect · slide · wrap · multiply · add</h2>
+      <div class="wave-wrap"><canvas id="cvMain" height="430"></canvas></div>
+
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--f)"></i> x[m] (the N kept samples)</span>
+        <span><i class="swatch" style="background:var(--g)"></i> h̃[n−m] — flipped, slid, <b>periodic</b></span>
+        <span><i class="swatch" style="background:var(--wrap)"></i> the wrapped-around tap</span>
+        <span><i class="swatch" style="background:var(--prod);opacity:.55"></i> products</span>
+        <span><i class="swatch" style="background:var(--conv)"></i> y[n] = IDFT{X·H}</span>
+        <span><i class="oring"></i> true linear (x∗h)[n]</span>
+      </div>
+
+      <div class="sumline" id="sumLine"></div>
+
+      <div class="controls">
+        <button class="btn animate" id="animateBtn">▶ Animate</button>
+        <button class="btn stop" id="stopBtn" disabled>⏸ Stop</button>
+        <button class="btn reset" id="resetBtn">↺ Reset</button>
+      </div>
+      <div class="tbar">
+        <span style="font-weight:700;color:var(--muted);font-size:13px">n</span>
+        <input type="range" id="nSlider" min="0" max="3" step="1" value="0" />
+        <span class="tval" id="nVal">n = 0</span>
+      </div>
+      <p class="hint" id="hint"></p>
+    </section>
+
+    <footer>
+      Circular Convolution · CSE 219 Signals &amp; Linear Systems · runs entirely in your browser.<br>
+      Companion: <a href="computing-convolution.html">Computing Convolutions</a> — the continuous, linear version of this picture.
+    </footer>
+
+  </div>
+  </main>
+
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* ====================================================================
+   STATE + MATHS
+   ==================================================================== */
+const PX = { deck:[1,2,3,4], ramp:[3,1,4,1,5], pulse:[0,2,4,4,2,0] };
+const PH = { pair:[1,1], smooth:[1,2,1], decay:[2,1] };
+const ri = (a,b)=> a+Math.floor(Math.random()*(b-a+1));
+const randX = ()=> Array.from({length:ri(4,6)},()=>ri(0,4));
+const randH = ()=> Array.from({length:ri(2,3)},()=>ri(0,2));
+
+const S = { x:PX.deck.slice(), h:PH.pair.slice(), mode:'circ', n:0, timer:null };
+
+const L = ()=>S.x.length, M = ()=>S.h.length;
+const N = ()=> S.mode==='pad' ? L()+M()-1 : Math.max(L(),M());
+const mod = (a,m)=>((a%m)+m)%m;
+const xAt = m => { const mm=mod(m,N()); return mm<L()?S.x[mm]:0; };   // padded x, periodic
+function yCirc(){ const n=N(),y=new Array(n).fill(0);
+  for(let k=0;k<n;k++) for(let j=0;j<M();j++) y[k]+=S.h[j]*xAt(k-j);
+  return y; }
+function yLin(){ const y=new Array(L()+M()-1).fill(0);
+  for(let k=0;k<y.length;k++) for(let j=0;j<M();j++){const m=k-j; if(m>=0&&m<L()) y[k]+=S.h[j]*S.x[m];}
+  return y; }
+// the taps at output n: natural (linear) position pos = n-j; wrapped if pos < 0
+const taps = n => Array.from({length:M()},(_,j)=>({j,w:S.h[j],pos:n-j,wrapped:n-j<0,at:mod(n-j,N())}));
+
+/* ====================================================================
+   CANVAS HELPERS  (same conventions as computing-convolution.html)
+   ==================================================================== */
+function fit(cv){
+  const dpr=window.devicePixelRatio||1;
+  const w=cv.clientWidth||cv.parentElement.clientWidth;
+  const h=cv.clientHeight||parseInt(cv.getAttribute('height'));
+  const W=Math.round(w*dpr),H=Math.round(h*dpr);
+  if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}
+  const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  return {g,w,h};
+}
+function stem(g,X,Y,x,y0,v,color,lw,r,filled=true,dash=[]){
+  g.strokeStyle=color; g.lineWidth=lw; g.setLineDash(dash);
+  g.beginPath(); g.moveTo(X(x),Y(0)); g.lineTo(X(x),Y(v)); g.stroke(); g.setLineDash([]);
+  if(filled){ g.fillStyle=color; g.beginPath(); g.arc(X(x),Y(v),r,0,7); g.fill(); }
+  else{ g.strokeStyle=color; g.lineWidth=1.8; g.beginPath(); g.arc(X(x),Y(v),r,0,7); g.stroke(); }
+}
+
+/* ---- editable preview plots ---- */
+function drawPreview(cvId, arr, color){
+  const cv=$(cvId); const {g,w,h}=fit(cv); g.clearRect(0,0,w,h);
+  const R={x0:30,y0:14,w:w-44,h:h-40};
+  const vmax=Math.max(4,...arr);
+  const X=i=>R.x0+(i+0.5)/arr.length*R.w, Y=v=>R.y0+R.h-(v/vmax)*R.h;
+  g.strokeStyle='#eef0f6'; for(let v=1;v<=vmax;v++){ g.beginPath(); g.moveTo(R.x0,Y(v)); g.lineTo(R.x0+R.w,Y(v)); g.stroke(); }
+  g.strokeStyle='#9aa1b1'; g.lineWidth=1.3; g.beginPath(); g.moveTo(R.x0,Y(0)); g.lineTo(R.x0+R.w,Y(0)); g.stroke();
+  g.font='10.5px system-ui'; g.fillStyle='#9aa1b1'; g.textAlign='center'; g.textBaseline='top';
+  arr.forEach((v,i)=>{ stem(g,X,Y,i,0,v,color,2.4,4); g.fillStyle='#9aa1b1'; g.fillText(String(i),X(i),Y(0)+6); });
+  g.font='700 11px system-ui'; g.fillStyle='#374151'; g.textAlign='left'; g.textBaseline='middle';
+  arr.forEach((v,i)=>{ g.textAlign='center'; g.fillText(String(v),X(i),Y(v)-11); });
+  return {R,vmax,len:arr.length};
+}
+function bindEdit(cvId, getArr){
+  const cv=$(cvId); let down=false;
+  const apply=(e)=>{
+    const arr=getArr(); const rect=cv.getBoundingClientRect();
+    const R={x0:30,y0:14,w:rect.width-44,h:rect.height-40};
+    const vmax=Math.max(4,...arr);
+    const i=Math.floor((e.clientX-rect.left-R.x0)/R.w*arr.length);
+    if(i<0||i>=arr.length) return;
+    const v=Math.round((R.y0+R.h-(e.clientY-rect.top))/R.h*vmax);
+    arr[i]=Math.max(0,Math.min(vmax,v));
+    S.n=Math.min(S.n,N()-1); redraw();
+  };
+  cv.addEventListener('pointerdown',e=>{down=true;cv.setPointerCapture(e.pointerId);apply(e);});
+  cv.addEventListener('pointermove',e=>{if(down)apply(e);});
+  const up=()=>{down=false;};
+  cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
+}
+
+/* ---- main plot ---- */
+function drawMain(){
+  const cv=$('cvMain'); const {g,w,h}=fit(cv); g.clearRect(0,0,w,h);
+  const n=S.n, NN=N(), yl=yLin(), yc=yCirc(), tp=taps(n);
+  const mLo=-M()-0.6, mHi=Math.max(NN,yl.length)+M()*0+1.6;
+  const R={x0:16,y0:14,w:w-30,h:h-46};
+  const vmax=Math.max(4,...yc,...yl)*1.12;
+  const X=m=>R.x0+(m-mLo)/(mHi-mLo)*R.w, Y=v=>R.y0+R.h-(v/vmax)*R.h;
+
+  // the kept window m = 0 .. N-1
+  g.fillStyle='rgba(37,99,235,.05)';
+  g.fillRect(X(-0.5),R.y0,X(NN-0.5)-X(-0.5),R.h);
+  g.strokeStyle='#c6cbd8'; g.setLineDash([5,4]); g.lineWidth=1;
+  g.beginPath(); g.moveTo(X(-0.5),R.y0); g.lineTo(X(-0.5),R.y0+R.h); g.stroke();
+  g.beginPath(); g.moveTo(X(NN-0.5),R.y0); g.lineTo(X(NN-0.5),R.y0+R.h); g.stroke();
+  g.setLineDash([]);
+  g.font='700 11.5px system-ui'; g.fillStyle='#6b7280'; g.textAlign='center'; g.textBaseline='top';
+  g.fillText(S.mode==='pad'?`the padded block, m = 0 … ${NN-1}`:`the N = ${NN} kept samples`,(X(-0.5)+X(NN-0.5))/2,R.y0+2);
+
+  // grid + axis
+  g.strokeStyle='#eef0f6'; for(let v=1;v<vmax;v++){ if(vmax<=14||v%2===0){g.beginPath();g.moveTo(R.x0,Y(v));g.lineTo(R.x0+R.w,Y(v));g.stroke();} }
+  g.strokeStyle='#9aa1b1'; g.lineWidth=1.3; g.beginPath(); g.moveTo(R.x0,Y(0)); g.lineTo(R.x0+R.w,Y(0)); g.stroke();
+  g.font='10.5px system-ui'; g.fillStyle='#9aa1b1'; g.textAlign='center'; g.textBaseline='top';
+  for(let m=Math.ceil(mLo);m<=Math.floor(mHi);m++) g.fillText(String(m),X(m),Y(0)+6);
+
+  // x[m] — red, fixed (zeros of the padding drawn hollow)
+  for(let m=0;m<NN;m++){
+    const v=xAt(m);
+    if(v===0){ stem(g,X,Y,m,0,0,'#f3b4b4',1.6,3.4,false); }
+    else stem(g,X,Y,m,0,v,'#dc2626',2.6,4.4);
+  }
+  // h̃[n-m] — blue taps; ghosts of the periodic copies; wrapped taps orange
+  tp.forEach(t=>{
+    if(t.w===0) return;
+    if(!t.wrapped){
+      stem(g,X,Y,t.pos,0,t.w,'#2563eb',2.6,4.4);
+      // faint periodic copies left and right
+      [t.pos-NN,t.pos+NN].forEach(p=>{ if(p>mLo&&p<mHi&&(p<-0.5||p>NN-0.5)){ g.globalAlpha=.3; stem(g,X,Y,p,0,t.w,'#2563eb',2,3.4); g.globalAlpha=1; } });
+    }else{
+      // ghost at its natural (off-window) spot + the wrapped tap inside, orange
+      g.globalAlpha=.45; stem(g,X,Y,t.pos,0,t.w,'#2563eb',2,3.6,false,[4,3]); g.globalAlpha=1;
+      stem(g,X,Y,t.at,0,t.w,'#ea580c',2.8,4.6);
+      // re-entry arrow
+      const ax=X(t.pos), bx=X(t.at), ay=Y(t.w)-10;
+      g.strokeStyle='#ea580c'; g.lineWidth=1.6; g.beginPath();
+      g.moveTo(ax,ay); g.quadraticCurveTo((ax+bx)/2, ay-34, bx, ay); g.stroke();
+      g.fillStyle='#ea580c'; g.beginPath(); g.moveTo(bx,ay); g.lineTo(bx-4,ay-7); g.lineTo(bx+4,ay-7); g.closePath(); g.fill();
+      g.font='700 10.5px system-ui'; g.textAlign='center'; g.textBaseline='bottom';
+      g.fillText('re-enters N later',(ax+bx)/2,ay-36);
+    }
+  });
+  // products — purple, at the window positions the taps touch
+  tp.forEach(t=>{
+    if(t.w===0) return;
+    const p=t.w*xAt(t.at); if(p===0) return;
+    g.globalAlpha=.5; stem(g,X,Y,t.at+0.14,0,p,'#7c3aed',3.4,0); g.globalAlpha=1;
+    g.fillStyle='#7c3aed'; g.beginPath();
+    const px=X(t.at+0.14), py=Y(p);
+    g.moveTo(px,py-5); g.lineTo(px+5,py); g.lineTo(px,py+5); g.lineTo(px-5,py); g.closePath(); g.fill();
+  });
+  // true linear result — orange rings (always visible; tail lives past N-1 in circular mode)
+  for(let k=0;k<yl.length;k++){
+    g.strokeStyle='#ea580c'; g.lineWidth=1.6; g.beginPath(); g.arc(X(k),Y(yl[k]),5.2,0,7); g.stroke();
+  }
+  // circular output — black dots, built up to the current n
+  for(let k=0;k<=n;k++){
+    stem(g,X,Y,k,0,yc[k],k===n?'#111827':'#4b5563',k===n?3:2,k===n?5:4);
+    g.font=(k===n?'800 12px':'700 11px')+' system-ui'; g.fillStyle=k===n?'#111827':'#4b5563';
+    g.textAlign='center'; g.textBaseline='bottom'; g.fillText(String(yc[k]),X(k),Y(yc[k])-8);
+  }
+  // current n marker
+  g.strokeStyle='#111827'; g.setLineDash([4,4]); g.lineWidth=1.2;
+  g.beginPath(); g.moveTo(X(n),R.y0+14); g.lineTo(X(n),Y(0)); g.stroke(); g.setLineDash([]);
+}
+
+/* ---- the running sum, with wrap terms in orange ---- */
+function updateSum(){
+  const n=S.n, tp=taps(n).filter(t=>t.w!==0);
+  const total=tp.reduce((s,t)=>s+t.w*xAt(t.at),0);
+  const terms=tp.map(t=>{
+    const s=`${t.w}·${xAt(t.at)}`;
+    return t.wrapped?`<span class="w">${s}</span>`:s;
+  }).join(' + ');
+  const yl=yLin();
+  const okay=Math.abs(total-(yl[n]||0))<1e-9;
+  $('sumLine').innerHTML=`<b>y[${n}]</b> = Σ x[m]·h̃[${n}−m] = ${terms} = <b>${total}</b>` +
+    (okay?` &nbsp;·&nbsp; matches linear ✓`:` &nbsp;·&nbsp; linear says ${yl[n]??0} — <span class="w">the orange term is the wrap</span>`);
+}
+function updateHint(){
+  $('hint').innerHTML = S.mode==='circ'
+    ? `The blue signal is h flipped and slid to n — but on N points it is <b>periodic</b>: the dashed ghost that slides off the left edge re-enters (orange) on the right and multiplies samples it was never meant to touch. Orange rings show the true linear convolution: its tail past n = ${N()-1} has nowhere to live. Now switch on <b>zero-padding</b> above.`
+    : `Both signals are padded to N = L + M − 1 = ${N()}. The wrapped tap still re-enters — but it lands on <b>padding zeros</b>, so every product it forms is 0. Every black dot now sits in its orange ring: circular = linear, tail included. This is why DFT-filtering works.`;
+}
+
+/* ====================================================================
+   WIRING
+   ==================================================================== */
+function fmtArr(a){ return '{ '+a.join(', ')+' }'; }
+function redraw(){
+  $('nSlider').max=String(N()-1); $('nSlider').value=String(S.n);
+  $('nVal').textContent='n = '+S.n;
+  $('xFormula').textContent='x = '+fmtArr(S.x)+'   (L = '+L()+')';
+  $('hFormula').textContent='h = '+fmtArr(S.h)+'   (M = '+M()+')';
+  drawPreview('cvX',S.x,'#dc2626'); drawPreview('cvH',S.h,'#2563eb');
+  drawMain(); updateSum(); updateHint();
+}
+$('xSelect').addEventListener('change',e=>{ S.x=(e.target.value==='random'?randX():PX[e.target.value]).slice(); S.n=0; redraw(); });
+$('hSelect').addEventListener('change',e=>{ S.h=(e.target.value==='random'?randH():PH[e.target.value]).slice(); S.n=0; redraw(); });
+bindEdit('cvX',()=>S.x); bindEdit('cvH',()=>S.h);
+document.querySelectorAll('#padGroup button').forEach(b=>b.addEventListener('click',()=>{
+  S.mode=b.dataset.value; S.n=Math.min(S.n,N()-1);
+  document.querySelectorAll('#padGroup button').forEach(x=>x.classList.toggle('active',x===b));
+  redraw();
+}));
+$('nSlider').addEventListener('input',e=>{ S.n=parseInt(e.target.value,10); redraw(); });
+
+function stopAnim(){ if(S.timer){clearInterval(S.timer);S.timer=null;} $('animateBtn').disabled=false; $('stopBtn').disabled=true; }
+$('animateBtn').addEventListener('click',()=>{
+  stopAnim(); $('animateBtn').disabled=true; $('stopBtn').disabled=false;
+  S.timer=setInterval(()=>{ S.n=(S.n+1)%N(); redraw(); },1200);
+});
+$('stopBtn').addEventListener('click',stopAnim);
+$('resetBtn').addEventListener('click',()=>{ stopAnim(); S.n=0; redraw(); });
+window.addEventListener('resize',redraw);
+
+/* ?preset= deep links: tokens like  deck-pad-n2  (no & or #) */
+(function(){
+  const q=new URLSearchParams(location.search).get('preset');
+  if(q) q.split('-').filter(Boolean).forEach(t=>{
+    if(PX[t]){ S.x=PX[t].slice(); $('xSelect').value=t; }
+    else if(PH[t]){ S.h=PH[t].slice(); $('hSelect').value=t; }
+    else if(t==='pad') S.mode='pad';
+    else if(/^n\d+$/.test(t)) S.n=parseInt(t.slice(1),10);
+  });
+  S.n=Math.min(Math.max(0,S.n),N()-1);
+  document.querySelectorAll('#padGroup button').forEach(x=>x.classList.toggle('active',x.dataset.value===S.mode));
+})();
+
+redraw();
+</script>
+</body>
+</html>
