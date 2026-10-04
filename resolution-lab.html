@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Frequency Detective · CSE 219</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="assets/site.css" />
+<script src="assets/site.js" defer></script>
+<style>
+  :root{--purple:#6d28d9;--purple-soft:#f3e8ff;--orange:#ea580c;--gold:#f59e0b;--teal:#0f766e;--line2:#e4e7ee}
+  *{box-sizing:border-box}
+  .content{overflow-x:hidden}
+  .lab{max-width:1220px;margin:0 auto;padding:30px 22px 70px}
+  .hero-lab{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:end;margin-bottom:20px}
+  .eyebrow-lab{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--purple);margin-bottom:7px}
+  .hero-lab h1{font-size:clamp(30px,4vw,46px);line-height:1.05;letter-spacing:-.045em;margin:0;color:#202338}
+  .hero-lab p{max-width:730px;margin:10px 0 0;color:#596273;font-size:15px;line-height:1.55}
+  .hero-badge{background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:11px 15px;color:#9a3412;font-size:12px;font-weight:850;line-height:1.45;white-space:nowrap}
+  .panel{background:#fff;border:1px solid var(--line2);box-shadow:var(--shadow);border-radius:18px;padding:20px 22px;margin-bottom:16px}
+  .panel-head{display:flex;align-items:start;justify-content:space-between;gap:16px;margin-bottom:12px}
+  .panel-head h2{font-size:17px;letter-spacing:-.02em;margin:0;color:#24283b}
+  .panel-head p{font-size:12.8px;color:#697386;line-height:1.45;margin:4px 0 0}
+  .number{display:inline-grid;place-items:center;width:25px;height:25px;border-radius:50%;background:var(--purple-soft);color:var(--purple);font-size:12px;margin-right:7px}
+  .source-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .source-label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:850;color:#697386}
+  .seg{display:inline-flex;background:#f2f3f8;border:1px solid #e6e8f0;border-radius:12px;padding:3px;gap:3px}
+  .seg button{border:0;border-radius:9px;background:transparent;color:#667085;padding:9px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+  .seg button.active{background:white;color:var(--purple);box-shadow:0 1px 5px #1f293722}
+  .f2-wrap{display:flex;align-items:center;gap:11px;flex:1;min-width:230px;max-width:440px;font-size:12.5px;color:#596273;font-weight:750}
+  .f2-wrap input{flex:1;accent-color:var(--purple);cursor:pointer}
+  .f2-wrap output{min-width:51px;color:var(--purple);font-weight:900;font-variant-numeric:tabular-nums}
+  .f2-wrap[hidden]{display:none}
+  .stage{position:relative;border:1px solid #dfe3ec;border-radius:14px;background:#fbfcff;overflow:hidden}
+  .stage canvas{display:block;width:100%;height:100%;touch-action:none}
+  .wave-stage{height:240px;cursor:ew-resize}
+  .spec-stage{height:375px;cursor:crosshair}
+  .canvas-hint{position:absolute;top:12px;right:14px;background:#ffffffeb;border:1px solid #e8eaf0;border-radius:10px;padding:6px 9px;color:#667085;font-size:11px;font-weight:750;pointer-events:none}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
+  .btn{border:1px solid #d9dce6;border-radius:10px;background:#fff;color:#364152;font:inherit;font-size:13px;font-weight:800;padding:9px 13px;cursor:pointer}
+  .btn:hover{border-color:#a5b4fc;background:#fafaff}
+  .btn.primary{background:var(--purple);border-color:var(--purple);color:white}
+  .btn.primary:hover{background:#5b21b6}
+  .btn:disabled{opacity:.55;cursor:default}
+  .small-note{font-size:12px;color:#697386;margin-left:auto}
+  .rail-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,360px);gap:22px;align-items:center}
+  .pad-title{font-size:13px;font-weight:850;color:#33394b;margin-bottom:5px}
+  .pad-sub{font-size:12px;line-height:1.45;color:#697386}
+  .pad-control{display:grid;grid-template-columns:auto minmax(100px,1fr) auto;gap:12px;align-items:center;color:var(--purple);font-size:12px;font-weight:900}
+  .pad-control input{width:100%;accent-color:var(--purple);cursor:pointer}
+  .pad-control output{font-size:19px;min-width:43px;font-variant-numeric:tabular-nums}
+  .memory{height:27px;background:#e7e9f0;border-radius:8px;overflow:hidden;margin-top:13px;position:relative;display:flex}
+  .memory .real{background:linear-gradient(90deg,#6d28d9,#9b5de5);height:100%;transition:width .18s}
+  .memory .zero{flex:1;background:repeating-linear-gradient(90deg,#e4e7ee 0 8px,#f7f8fb 8px 14px);height:100%}
+  .memory-labels{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#70798a;margin-top:6px;font-variant-numeric:tabular-nums}
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:15px 0 0}
+  .metric{background:#f8f9fc;border:1px solid #e9ebf2;border-radius:11px;padding:10px 12px;min-width:0}
+  .metric span{display:block;color:#727b8b;font-size:11px;font-weight:700;line-height:1.3}
+  .metric strong{display:block;color:#262b3d;font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;margin-top:2px}
+  .metric small{color:#777f8e;font-size:10.5px}
+  .metric.duration{border-color:#f4d9aa;background:#fffbf2}.metric.duration strong{color:#9a5700}
+  .metric.grid strong{color:var(--purple)}
+  .legend{display:flex;flex-wrap:wrap;gap:12px 18px;margin-top:10px;color:#626c7f;font-size:11.5px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .swatch{width:19px;height:3px;border-radius:2px;background:var(--orange)}
+  .swatch.ghost{background:repeating-linear-gradient(90deg,#9ca3af 0 5px,transparent 5px 8px)}
+  .swatch.dot{height:8px;width:8px;border-radius:50%;background:var(--purple)}
+  .swatch.probe{background:var(--teal)}
+  .readout{display:grid;grid-template-columns:1fr auto;align-items:center;gap:16px;margin-top:15px;padding:13px 15px;border-radius:13px;background:#effaf8;border:1px solid #b9e5da}
+  .readout b{color:#115e59}.readout p{font-size:12.5px;line-height:1.45;color:#385d5a;margin:3px 0 0}
+  .readout-number{font-size:20px;font-weight:900;color:var(--teal);font-variant-numeric:tabular-nums;text-align:right}
+  .insight{margin-top:14px;background:linear-gradient(120deg,#f7f3ff,#fff7ed);border:1px solid #e8dcff;border-radius:12px;padding:12px 15px;color:#4b4661;font-size:13px;line-height:1.55}
+  .insight strong{color:#442288}
+  .footer-link{font-size:12px;color:#6b7280;margin-top:15px}.footer-link a{color:var(--purple);font-weight:800}
+  @media(max-width:1100px){.rail-row{grid-template-columns:1fr}}
+  @media(max-width:800px){.hero-lab{grid-template-columns:1fr}.hero-badge{justify-self:start}.small-note{margin-left:0}.metrics{grid-template-columns:1fr 1fr}.spec-stage{height:325px}}
+  @media(max-width:560px){.lab{padding:21px 13px 55px}.panel{padding:16px 14px}.panel-head{display:block}.wave-stage{height:205px}.spec-stage{height:300px}.canvas-hint{font-size:10px;top:7px;right:7px}.metrics{grid-template-columns:1fr}.readout{grid-template-columns:1fr}.readout-number{text-align:left}.f2-wrap{min-width:100%}}
+</style>
+</head>
+<body>
+<div class="site">
+  <aside class="sidebar" id="siteSidebar"></aside>
+  <main class="content">
+    <div class="lab">
+      <header class="hero-lab">
+        <div>
+          <div class="eyebrow-lab">DTFT &amp; DFT · hands-on experiment</div>
+          <h1>The Frequency Detective</h1>
+          <p>Two tones might be hiding inside one blurry bump. Drag the recording edge and the padding dial to discover which action actually separates them.</p>
+        </div>
+        <div class="hero-badge" id="sourceBadge">100 Hz + 103 Hz<br>sampled at 1000 Hz</div>
+      </header>
+
+      <section class="panel" aria-labelledby="sourceTitle">
+        <div class="source-row">
+          <span class="source-label" id="sourceTitle">Signal source</span>
+          <div class="seg" role="group" aria-label="Signal source">
+            <button type="button" id="oneBtn">100 Hz alone</button>
+            <button type="button" id="twoBtn" class="active">Two tones</button>
+          </div>
+          <label class="f2-wrap" id="f2Wrap">Second tone <input id="f2Slider" type="range" min="101" max="110" step="0.1" value="103" aria-label="Second tone frequency"><output id="f2Out">103.0 Hz</output></label>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="recordTitle">
+        <div class="panel-head">
+          <div><h2 id="recordTitle"><span class="number">1</span>Drag the edge of the recording</h2><p>The bright waveform has been observed. The faint continuation is what the source would produce if you kept listening.</p></div>
+        </div>
+        <div class="stage wave-stage"><canvas id="waveCanvas" tabindex="0" role="slider" aria-label="Recording duration" aria-valuemin="0.1" aria-valuemax="1" aria-valuenow="0.1"></canvas><span class="canvas-hint">Drag the gold edge ↔</span></div>
+        <div class="actions">
+          <button class="btn primary" id="captureBtn" type="button">▶ Keep listening</button>
+          <button class="btn" id="hearBtn" type="button">♫ Hear this recording</button>
+          <button class="btn" id="resetBtn" type="button">↺ Back to 0.1 s</button>
+          <span class="small-note">The capture animation plays in slow motion. Listening uses the selected real duration.</span>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="padTitle">
+        <div class="rail-row">
+          <div><div class="pad-title" id="padTitle"><span class="number">2</span>Add zeros after the recording</div><div class="pad-sub">Slide the dial. Purple is measured sound; striped gray is appended silence. The original samples stay exactly the same.</div></div>
+          <div class="pad-control"><span>×1</span><input id="padSlider" type="range" min="0" max="4" step="1" value="0" aria-label="Zero padding factor"><output id="padOut">×1</output></div>
+        </div>
+        <div class="memory" aria-hidden="true"><div class="real" id="realMemory"></div><div class="zero"></div></div>
+        <div class="memory-labels"><span id="realLabel">100 measured samples</span><span id="zeroLabel">0 appended zeros</span></div>
+        <div class="metrics" aria-live="polite">
+          <div class="metric duration"><span>Actual observation</span><strong id="durationMetric">0.10 s</strong><small>N/fₛ</small></div>
+          <div class="metric"><span>Window scale</span><strong id="windowMetric">≈ 10 Hz</strong><small>fₛ/N · roughly sets lobe width</small></div>
+          <div class="metric grid"><span>DFT dot spacing</span><strong id="gridMetric">10 Hz</strong><small>fₛ/M · spacing between displayed dots</small></div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="spectrumTitle">
+        <div class="panel-head">
+          <div><h2 id="spectrumTitle"><span class="number">3</span>Inspect the spectrum</h2><p>The orange line is the DTFT of the measured samples. Purple dots are DFT values. Drag the teal probe to question any frequency.</p></div>
+        </div>
+        <div class="stage spec-stage"><canvas id="specCanvas" tabindex="0" role="slider" aria-label="Frequency probe" aria-valuemin="85" aria-valuemax="118" aria-valuenow="103"></canvas><span class="canvas-hint">Drag the teal probe ↔</span></div>
+        <div class="legend">
+          <span><i class="swatch"></i>current DTFT</span><span><i class="swatch ghost"></i>original 0.1 s DTFT</span><span><i class="swatch dot"></i>DFT samples</span><span><i class="swatch probe"></i>frequency probe</span>
+        </div>
+        <div class="readout" aria-live="polite">
+          <div><b id="probeTitle">Probe at 103.0 Hz</b><p id="probeText">A large response here does not, by itself, prove that a 103 Hz tone exists.</p></div>
+          <div class="readout-number" id="probeValue">—</div>
+        </div>
+        <div class="insight" id="insight"><strong>Try this:</strong> First drag the padding dial to ×16. Watch the purple dots multiply while the orange line stays put. Then drag the gold recording edge.</div>
+      </section>
+      <p class="footer-link">Want the full DTFT/DFT picture, including phase and winding? Open the <a href="aperiodic-fourier.html">Aperiodic lab</a>.</p>
+    </div>
+  </main>
+</div>
+<script>
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const FS = 1000, F1 = 100, FMIN = 85, FMAX = 118, NMIN = 100, NMAX = 1000;
+  const PAD = [1, 2, 4, 8, 16];
+  const state = {N:100, padIndex:0, two:true, f2:103, probe:103, dragging:null, captureId:0, audio:null, heard:false, padded:false, extended:false};
+  const colors = {ink:"#293246",muted:"#697386",grid:"#e8eaf1",purple:"#6d28d9",orange:"#ea580c",gold:"#f59e0b",teal:"#0f766e",ghost:"#a2a9b6"};
+  const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+  const fmt = v => (Math.round(v*10)/10).toFixed(1);
+  const pad = () => PAD[state.padIndex];
+  const signal = t => Math.cos(2*Math.PI*F1*t) + (state.two ? Math.cos(2*Math.PI*state.f2*t) : 0);
+
+  // Exact finite sum of e^(j2πqn/fs), computed without iterating over samples.
+  function kernel(q,N){
+    const a = Math.PI*q/FS;
+    const ratio = Math.abs(a)<1e-11 ? N : Math.sin(N*a)/Math.sin(a);
+    const phase = (N-1)*a;
+    return [ratio*Math.cos(phase),ratio*Math.sin(phase)];
+  }
+  function magnitude(f,N){
+    let re=0,im=0;
+    for(const tone of state.two?[F1,state.f2]:[F1]){
+      const pos=kernel(tone-f,N),neg=kernel(-tone-f,N);
+      re+=(pos[0]+neg[0])*0.5;
+      im+=(pos[1]+neg[1])*0.5;
+    }
+    return Math.hypot(re,im)/N;
+  }
+  function canvasCtx(canvas){
+    const rect=canvas.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);
+    canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);
+    const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);
+    return {ctx,w:rect.width,h:rect.height};
+  }
+  function line(ctx,x1,y1,x2,y2,color,width=1,dash=[]){
+    ctx.beginPath();ctx.setLineDash(dash);ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();ctx.setLineDash([]);
+  }
+  function label(ctx,str,x,y,color=colors.muted,align="center",font="11px system-ui"){
+    ctx.fillStyle=color;ctx.font=font;ctx.textAlign=align;ctx.fillText(str,x,y);
+  }
+  function plotPath(ctx,values,color,width,dash=[]){
+    ctx.beginPath();ctx.setLineDash(dash);
+    values.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));
+    ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();ctx.setLineDash([]);
+  }
+  function drawWave(){
+    const {ctx,w,h}=canvasCtx($("waveCanvas")),p={l:47,r:18,t:20,b:36};
+    const W=w-p.l-p.r,H=h-p.t-p.b,edge=p.l+W*state.N/NMAX,mid=p.t+H/2;
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle="#fbfcff";ctx.fillRect(0,0,w,h);
+    ctx.fillStyle="#f3e8ff";ctx.fillRect(p.l,p.t,edge-p.l,H);
+    ctx.fillStyle="#f6f7fa";ctx.fillRect(edge,p.t,p.l+W-edge,H);
+    for(let i=0;i<=10;i++){
+      const x=p.l+i*W/10;line(ctx,x,p.t,x,p.t+H,colors.grid,1);
+      label(ctx,(i/10).toFixed(1),x,h-14);
+    }
+    line(ctx,p.l,mid,p.l+W,mid,"#b6bdc9",1.2);
+    const scale=H/4.5,observed=[],future=[],steps=Math.max(600,Math.round(W*1.6));
+    for(let i=0;i<=steps;i++){
+      const t=i/steps,x=p.l+W*t,y=mid-signal(t)*scale;
+      (t<=state.N/NMAX?observed:future).push([x,y]);
+      if(i&&t>state.N/NMAX&&(i-1)/steps<state.N/NMAX){observed.push([x,y]);future.unshift([x,y]);}
+    }
+    if(future.length)plotPath(ctx,future,"#c7cbd5",1.5,[4,4]);
+    if(observed.length)plotPath(ctx,observed,colors.purple,2.2);
+    line(ctx,edge,p.t,edge,p.t+H,colors.gold,3);
+    ctx.fillStyle=colors.gold;ctx.beginPath();ctx.arc(edge,mid,9,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="white";ctx.beginPath();ctx.arc(edge,mid,3.5,0,Math.PI*2);ctx.fill();
+    const tagX=clamp(edge,83,w-90);
+    ctx.fillStyle="#9a5700";ctx.font="800 12px system-ui";ctx.textAlign="center";
+    ctx.fillText((state.N/FS).toFixed(2)+" s recorded",tagX,p.t+15);
+  }
+  function drawSpectrum(){
+    const {ctx,w,h}=canvasCtx($("specCanvas")),p={l:48,r:20,t:28,b:45};
+    const W=w-p.l-p.r,H=h-p.t-p.b,y0=p.t+H,top=1.12;
+    const px=f=>p.l+(f-FMIN)/(FMAX-FMIN)*W;
+    const py=v=>y0-clamp(v,0,top)/top*H;
+    ctx.clearRect(0,0,w,h);ctx.fillStyle="#fbfcff";ctx.fillRect(0,0,w,h);
+    for(let f=85;f<=115;f+=5){const x=px(f);line(ctx,x,p.t,x,y0,colors.grid);label(ctx,String(f),x,h-19);}
+    for(let v=0;v<=1.01;v+=0.25){const y=py(v);line(ctx,p.l,y,w-p.r,y,colors.grid);label(ctx,v.toFixed(2),p.l-8,y+4,colors.muted,"right");}
+    label(ctx,"frequency (Hz)",w-p.r,p.t-9,colors.muted,"right");
+    label(ctx,"|X(f)| / N",p.l,p.t-9,colors.muted,"left");
+    const base=[],current=[],K=Math.max(600,Math.round(W));
+    for(let i=0;i<=K;i++){
+      const f=FMIN+(FMAX-FMIN)*i/K,x=px(f);
+      base.push([x,py(magnitude(f,NMIN))]);current.push([x,py(magnitude(f,state.N))]);
+    }
+    if(state.N>NMIN)plotPath(ctx,base,colors.ghost,1.5,[5,5]);
+    plotPath(ctx,current,colors.orange,2.8);
+    for(const f of state.two?[F1,state.f2]:[F1]){
+      const x=px(f);line(ctx,x,p.t+16,x,y0,"#cfd4df",1,[3,5]);
+    }
+    const M=state.N*pad(),first=Math.ceil(FMIN*M/FS),last=Math.floor(FMAX*M/FS);
+    for(let k=first;k<=last;k++){
+      const f=k*FS/M,v=magnitude(f,state.N),x=px(f),y=py(v);
+      line(ctx,x,y0,x,y,"#8b5cf699",1);
+      ctx.fillStyle=colors.purple;ctx.beginPath();ctx.arc(x,y,M<350?4:2.6,0,Math.PI*2);ctx.fill();
+    }
+    const qx=px(state.probe),qy=py(magnitude(state.probe,state.N));
+    line(ctx,qx,p.t,qx,y0,colors.teal,1.8,[5,4]);
+    ctx.fillStyle=colors.teal;ctx.beginPath();ctx.arc(qx,qy,6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="white";ctx.beginPath();ctx.arc(qx,qy,2.2,0,Math.PI*2);ctx.fill();
+    label(ctx,fmt(state.probe)+" Hz",clamp(qx,p.l+30,w-p.r-30),p.t+13,colors.teal,"center","800 11px system-ui");
+  }
+  function updateText(){
+    const P=pad(),N=state.N,M=N*P,T=N/FS,scale=FS/N,spacing=FS/M;
+    $("oneBtn").classList.toggle("active",!state.two);$("twoBtn").classList.toggle("active",state.two);
+    $("sourceBadge").innerHTML=state.two?`100 Hz + ${fmt(state.f2)} Hz<br>sampled at 1000 Hz`:"100 Hz alone<br>sampled at 1000 Hz";
+    $("f2Wrap").hidden=!state.two;$("f2Out").textContent=fmt(state.f2)+" Hz";
+    $("padOut").textContent="×"+P;$("realMemory").style.width=(100/P)+"%";
+    $("realLabel").textContent=N+" measured samples";
+    $("zeroLabel").textContent=(M-N)+" appended zeros";
+    $("durationMetric").textContent=T.toFixed(2)+" s";
+    $("waveCanvas").setAttribute("aria-valuenow",T.toFixed(2));
+    $("specCanvas").setAttribute("aria-valuenow",fmt(state.probe));
+    $("windowMetric").textContent="≈ "+(scale>=10?scale.toFixed(1):scale.toFixed(2))+" Hz";
+    $("gridMetric").textContent=(spacing>=10?spacing.toFixed(1):spacing.toFixed(2))+" Hz";
+    $("probeTitle").textContent="Probe at "+fmt(state.probe)+" Hz";
+    const v=magnitude(state.probe,N),base=magnitude(F1,N);
+    $("probeValue").textContent=(100*v/Math.max(base,1e-9)).toFixed(0)+"% of 100 Hz";
+    $("probeText").textContent=state.two
+      ?"Compare with 100 Hz. When two tones are close, their responses overlap until enough real sound is recorded."
+      :"Only 100 Hz is present. A large reading elsewhere can be leakage from that one tone.";
+    $("captureBtn").textContent=state.captureId?"Ⅱ Pause capture":"▶ Keep listening";
+    $("captureBtn").disabled=N>=NMAX&&!state.captureId;
+    const insight=$("insight");
+    if(N===NMIN&&P===1)insight.innerHTML="<strong>Try this:</strong> First drag the padding dial to ×16. Watch the purple dots multiply while the orange line stays put. Then drag the gold recording edge.";
+    else if(N===NMIN)insight.innerHTML="<strong>More dots, same evidence.</strong> The DFT spacing is now smaller, but the broad orange lobe is unchanged. Drag the gold edge or press Keep listening.";
+    else if(state.two&&T*Math.abs(state.f2-F1)>=1)insight.innerHTML="<strong>Two peaks emerge.</strong> You added real samples, so the orange DTFT itself narrowed. The tone separation now spans about "+(T*Math.abs(state.f2-F1)).toFixed(1)+" cycles of the observation.";
+    else if(state.two)insight.innerHTML="<strong>The curve is changing.</strong> Keep recording: the extra real cycles make the overlapping lobes narrower. Padding only changes where the dots land.";
+    else insight.innerHTML="<strong>One tone, narrowing lobe.</strong> The response away from 100 Hz falls as the observation grows. Move the teal probe to see it.";
+  }
+  function render(){updateText();drawWave();drawSpectrum();}
+  function stopCapture(){if(state.captureId){cancelAnimationFrame(state.captureId);state.captureId=0;render();}}
+  function setN(n){state.N=clamp(Math.round(n),NMIN,NMAX);if(state.N>NMIN)state.extended=true;render();}
+  function animateCapture(){
+    if(state.captureId){stopCapture();return;}
+    if(state.N>=NMAX)return;
+    const from=state.N,start=performance.now(),duration=(NMAX-from)/900*4400;
+    function frame(now){
+      const t=clamp((now-start)/duration,0,1);
+      state.N=Math.round(from+(NMAX-from)*t);
+      if(t<1)state.captureId=requestAnimationFrame(frame);else state.captureId=0;
+      if(state.N>NMIN)state.extended=true;
+      render();
+    }
+    state.captureId=requestAnimationFrame(frame);render();
+  }
+  function timeFromPointer(e){
+    const rect=$("waveCanvas").getBoundingClientRect(),pL=47,pR=18;
+    return clamp((e.clientX-rect.left-pL)/(rect.width-pL-pR),.1,1);
+  }
+  function freqFromPointer(e){
+    const rect=$("specCanvas").getBoundingClientRect(),pL=48,pR=20;
+    return clamp(FMIN+(e.clientX-rect.left-pL)/(rect.width-pL-pR)*(FMAX-FMIN),FMIN,FMAX);
+  }
+  const wave=$("waveCanvas"),spec=$("specCanvas");
+  wave.addEventListener("pointerdown",e=>{stopCapture();state.dragging="wave";wave.setPointerCapture(e.pointerId);setN(timeFromPointer(e)*FS);});
+  wave.addEventListener("pointermove",e=>{if(state.dragging==="wave")setN(timeFromPointer(e)*FS);});
+  wave.addEventListener("pointerup",()=>state.dragging=null);
+  wave.addEventListener("pointercancel",()=>state.dragging=null);
+  wave.addEventListener("keydown",e=>{if(["ArrowLeft","ArrowRight","Home","End"].includes(e.key)){e.preventDefault();stopCapture();setN(e.key==="Home"?NMIN:e.key==="End"?NMAX:state.N+(e.key==="ArrowRight"?10:-10));}});
+  spec.addEventListener("pointerdown",e=>{state.dragging="probe";spec.setPointerCapture(e.pointerId);state.probe=freqFromPointer(e);render();});
+  spec.addEventListener("pointermove",e=>{if(state.dragging==="probe"){state.probe=freqFromPointer(e);render();}});
+  spec.addEventListener("pointerup",()=>state.dragging=null);
+  spec.addEventListener("pointercancel",()=>state.dragging=null);
+  spec.addEventListener("keydown",e=>{if(["ArrowLeft","ArrowRight","Home","End"].includes(e.key)){e.preventDefault();state.probe=e.key==="Home"?FMIN:e.key==="End"?FMAX:clamp(state.probe+(e.key==="ArrowRight"?.1:-.1),FMIN,FMAX);render();}});
+  $("captureBtn").addEventListener("click",animateCapture);
+  $("resetBtn").addEventListener("click",()=>{stopCapture();setN(NMIN);});
+  $("padSlider").addEventListener("input",e=>{state.padIndex=Number(e.target.value);if(state.padIndex>0)state.padded=true;render();});
+  $("f2Slider").addEventListener("input",e=>{state.f2=Number(e.target.value);render();});
+  $("oneBtn").addEventListener("click",()=>{state.two=false;render();});
+  $("twoBtn").addEventListener("click",()=>{state.two=true;render();});
+  $("hearBtn").addEventListener("click",async()=>{
+    if(state.audio){state.audio.source.stop();state.audio.ctx.close();state.audio=null;$("hearBtn").textContent="♫ Hear this recording";return;}
+    const AudioCtx=window.AudioContext||window.webkitAudioContext;
+    if(!AudioCtx){$("hearBtn").textContent="Audio unavailable";return;}
+    const ctx=new AudioCtx();await ctx.resume();
+    const count=Math.round(state.N/FS*ctx.sampleRate),buffer=ctx.createBuffer(1,count,ctx.sampleRate),data=buffer.getChannelData(0);
+    for(let i=0;i<count;i++){
+      const t=i/ctx.sampleRate,fade=Math.min(1,t/.008,(count-i-1)/ctx.sampleRate/.008);
+      data[i]=signal(t)*(state.two?.33:.55)*Math.max(0,fade);
+    }
+    const source=ctx.createBufferSource();source.buffer=buffer;source.connect(ctx.destination);
+    state.audio={source,ctx};$("hearBtn").textContent="■ Stop sound";
+    source.onended=()=>{if(state.audio?.source===source){state.audio=null;$("hearBtn").textContent="♫ Hear this recording";ctx.close();}};
+    source.start();
+  });
+  let resizeTimer;window.addEventListener("resize",()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(render,80);});
+  render();
+})();
+</script>
+</body>
+</html>

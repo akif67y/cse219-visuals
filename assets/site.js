@@ -28,6 +28,7 @@
       { href: "fourier-epicycles-1d.html", icon: "🌀", label: "1D Epicycles" },
       { href: "fourier-epicycles-2d.html", icon: "✒️", label: "2D Epicycles" },
       { group: "DTFT & DFT" },
+      { href: "resolution-lab.html", icon: "🔎", label: "Frequency Detective" },
       { href: "periodic-fourier.html", icon: "🔁", label: "Periodic" },
       { href: "aperiodic-fourier.html", icon: "📈", label: "Aperiodic" },
       { group: "Fourier Transform" },
