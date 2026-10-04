@@ -10,10 +10,17 @@ or recorded data stays on the user's machine.
 
 ## Run Locally
 
-The quickest option is to open `index.html` directly in a browser.
+Use a current version of Chrome, Edge, or Firefox. The audio demos load local
+clips with `fetch`, and microphone recording needs a secure browser context, so
+run the site through a local server.
 
-For features that need a secure browser context, such as microphone recording,
-serve the folder over `localhost`:
+On Windows, double-click `serve.cmd` or run it from Command Prompt:
+
+```bat
+serve.cmd
+```
+
+On macOS or Linux, run:
 
 ```bash
 ./serve.sh
@@ -22,14 +29,18 @@ serve the folder over `localhost`:
 Then open:
 
 ```text
-http://localhost:8000
+http://127.0.0.1:8000/
 ```
 
-You can also choose a different port:
+Keep the server window open while using the demos. Press Ctrl+C there to stop
+it. You can choose a different port by passing it as the first argument:
 
 ```bash
-./serve.sh 9000
+serve.cmd 9000
 ```
+
+On macOS or Linux, use `./serve.sh 9000` instead. Both launchers require
+Python 3; no Python packages, Node packages, or build tools are needed.
 
 ## Project Structure
 
